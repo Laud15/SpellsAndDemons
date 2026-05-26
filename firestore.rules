@@ -1,0 +1,135 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------
+    // SUPPORT FUNCTION
+    // -------------------------------------------------------
+    
+    // the user that make the reuqest is auth.
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // the user that make the request is the owner of the doc
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+
+    // check that the fields of the request are exactly those expected
+    // avoid that the client put non expected fields
+    function hasOnly(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // -------------------------------------------------------
+    // USERS
+    // -------------------------------------------------------
+    match /users/{uid} {
+      // everyone who is logged can read alla profile(this is necessary for search other users)
+      allow read: if isAuth();
+
+      //Only the owner can create their own document and only with the expected fields
+      allow create: if isOwner(uid) 
+        && hasOnly(['uid', 'username', 'email', 'score', 'friends', 'createdAt']);
+
+      //Only the owner can update their profile
+      // But it can't edit UID, email, and points on its own
+      // (score is changed only by Cloud Functions)
+      allow update: if isOwner(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['username', 'friends']);
+
+      //nobody can delete any other user
+      allow delete: if false;
+    }
+
+    // -------------------------------------------------------
+    // USERNAMES
+    // -------------------------------------------------------
+    match /usernames/{username} {
+      //everyone can read (it is used to check uniqueness during registration)
+      allow read: if true;
+
+      //Only the logged in user can reserve his username and the document must contain only his UID
+      allow create: if isAuth()
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid;
+
+      //No one can change or delete an already reserved username
+      allow update, delete: if false;
+    }
+
+    // -------------------------------------------------------
+    // FRIENDREQUEST
+    // -------------------------------------------------------
+
+    match /friendRequests/{requestId} {
+
+      //only who is in the request (sender or receive) can read
+      allow read: if isAuth()
+        && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid)
+
+      //an user can only create request with him as sender
+      allow create: if isAuth()
+        && request.resource.data.fromUid == request.auth.uid
+        && request.resource.data.toUid != request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.keys().hasOnly(['fromUid', 'fromUsername', 'toUid', 'status', 'createdAt']);
+
+      //only the receiver can update the status
+      allow update: if isAuth()
+        && resource.data.toUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+
+      allow delete: if false;
+    }
+
+    // -------------------------------------------------------
+    // LOBBIES
+    // -------------------------------------------------------
+    match /lobbies/{lobbyId} {
+      //onyl lobby's member can read the lobby
+      allow read: if isAuth()
+        && request.auth.uid in resource.data.players;
+
+      //Only a logged-in user can create a lobby must be the host and the first player
+      allow create: if isAuth()
+        && request.resource.data.hostId == request.auth.uid
+        && request.resource.data.players.hasOnly([request.auth.uid])
+        && hasOnly(['hostId', 'players', 'status']);
+
+      //Only members can update the lobby
+      //the status is managed by the Cloud Functions, not the client
+      allow update: if isAuth()
+        && request.auth.uid in resource.data.players
+        && hasOnly(['players']);
+
+      allow delete: if false;
+    }
+
+    // -------------------------------------------------------
+    // GAMES
+    // -------------------------------------------------------
+    match /games/{gameId} {
+      // Only players in the game can read the status
+      allow read: if isAuth()
+        && request.auth.uid in resource.data.playerIds;
+
+      //No one can create or edit a game from the client
+      //everything goes through Cloud Functions
+      allow create, update, delete: if false;
+    }
+
+    // -------------------------------------------------------
+    // SCROLLS (spells catalogue)
+    // -------------------------------------------------------
+    match /scrolls/{scrollId} {
+      //Everyone can read the catalogue
+      allow read: if isAuth();
+
+      //No one can change it from the client
+      allow create, update, delete: if false;
+    }
+
+  }
+}
