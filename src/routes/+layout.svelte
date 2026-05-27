@@ -21,6 +21,7 @@ onSnapshot (Firestore):
     import { auth, db } from '$lib/firebase/clientSDK';
     import { authStore } from '$lib/stores/auth.svelte';
     import type { AppUser } from '$lib/types';
+    import { subscribeToPush } from '$lib/firebase/notification';
 
     let { children } = $props();
 
@@ -45,6 +46,8 @@ onSnapshot (Firestore):
                     }
                 }); 
 
+                subscribeToPush(user.uid);
+                
             } else {
                 authStore.setAppUser(null);
             }

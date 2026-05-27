@@ -10,6 +10,7 @@
   import { db } from '$lib/firebase/clientSDK';
   import type { FriendRequest } from '$lib/types';
   import { authStore } from '$lib/stores/auth.svelte';
+  
 
   interface Friend {
     uid: string;
@@ -27,7 +28,7 @@
 
   let friends = $state<Friend[]>([]);
   
-  //load the friends's username
+  //load the friends's usernames
   $effect(() =>{
     const currentUser = authStore.appUser;// $effect track this dependency
     if(!currentUser || currentUser.friends.length === 0) { 
@@ -67,7 +68,9 @@
     );
 
     const unsubscribe = onSnapshot(q, (snap) => {
+
       incomingRequests = snap.docs.map(d => ({ id: d.id, ...d.data() } as FriendRequest));
+      
     }, (error) => {
       console.error('error snapshot:', error);
     });
@@ -95,11 +98,17 @@
 
   async function handleSendRequest() {
     if (!searchResult) { return; }
+    if (searchResult.uid === authStore.appUser!.uid){
+      requestMessage = 'Cannot send a request to yourself';
+      return;
+    }
     try {
+
       await sendFriendRequest(searchResult.uid);
       requestMessage = 'Request send!';
       searchResult = null;
       searchUsername = '';
+
     } catch (e: any) {
       switch (e.code) {
         case 'social/request-already-sent':

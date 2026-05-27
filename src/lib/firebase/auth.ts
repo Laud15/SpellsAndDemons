@@ -7,6 +7,7 @@ import {
 
 import { doc, setDoc, getDoc, writeBatch } from 'firebase/firestore';
 import { auth, db } from './clientSDK';
+import { unsubscribeFromPush } from './notification'
 
 
 export async function register(email: string, password: string, username: string) {
@@ -31,13 +32,14 @@ export async function register(email: string, password: string, username: string
 
     //create user profile
     const userDocRef = doc(db, "users", uid);
-        batch.set(userDocRef, {
-            uid: uid,
-            username: username,
-            email: email,
-            score: 0,
-            friends: [],
-            createdAt: new Date()
+    batch.set(userDocRef, {
+        uid: uid,
+        username: username,
+        email: email,
+        score: 0,
+        friends: [],
+        pushSubscription: null,
+        createdAt: new Date()
         });
 
     await batch.commit();
@@ -47,7 +49,8 @@ export async function  login(email: string, password: string) {
     await signInWithEmailAndPassword(auth, email, password)
 }
 
-export async function logout(){
+export async function logout(uid: string){
+    await unsubscribeFromPush(uid);
     await signOut(auth);
 }
 

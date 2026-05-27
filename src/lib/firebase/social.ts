@@ -63,6 +63,13 @@ export async function sendFriendRequest(toUid: string) {
     status: 'pending',
     createdAt: new Date()
     });
+
+  try {
+    const notify = httpsCallable(functions, 'sendFriendRequestNotification');
+    const result = await notify({ toUid, fromUsername: currentUser.username });
+  } catch(e: any) {
+    console.error("error in sending friend request notify");
+  }
 }
 
 //accept a request, add both at the friends's list with a batch

@@ -31,13 +31,13 @@ service cloud.firestore {
 
       //Only the owner can create their own document and only with the expected fields
       allow create: if isOwner(uid) 
-        && hasOnly(['uid', 'username', 'email', 'score', 'friends', 'createdAt']);
+        && hasOnly(['uid', 'username', 'email', 'score', 'friends','pushSubscription', 'createdAt']);
 
       //Only the owner can update their profile
       // But it can't edit UID, email, and points on its own
       // (score is changed only by Cloud Functions)
       allow update: if isOwner(uid)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['username', 'friends']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['username', 'friends','pushSubscription']);
 
       //nobody can delete any other user
       allow delete: if false;

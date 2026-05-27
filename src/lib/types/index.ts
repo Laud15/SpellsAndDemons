@@ -4,6 +4,7 @@ export interface AppUser {
     username: string;
     score: number;
     friends: string[]; //uid array
+    pushSubscription?: PushSubscriptionJSON | null;
 }
 
 export interface FriendRequest {

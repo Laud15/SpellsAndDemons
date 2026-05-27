@@ -8,7 +8,7 @@
   let username = $derived(authStore.appUser?.username);
   
   async function handleLogout() {
-    await logout();
+    await logout(authStore.appUser?.uid!);
     goto('/login');
   }
 </script>

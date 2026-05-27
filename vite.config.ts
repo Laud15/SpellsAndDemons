@@ -3,11 +3,18 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  server: {
+    fs: {
+      allow: ['..']  
+    }
+  },
   plugins: [
     sveltekit(),
     VitePWA({
       registerType: 'autoUpdate',
-
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       manifest: {
         name: 'Spells & Demons',
         short_name: 'S&D',
@@ -17,12 +24,12 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: '/icons/skull_192.png',
+            src: 'icons/skull_192.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: '/icons/skull_512.png',
+            src: 'icons/skull_512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable',

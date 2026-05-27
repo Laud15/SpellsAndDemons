@@ -33,3 +33,4 @@ ui-debug.log
 # Cloud Functions
 functions/lib/
 functions/node_modules/
+functions/.env.local

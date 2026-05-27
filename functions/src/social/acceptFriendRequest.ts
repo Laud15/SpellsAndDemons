@@ -1,5 +1,6 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {getFirestore, FieldValue} from "firebase-admin/firestore";
+import {sendPushToUser} from "../notifications/sendPushNotifications";
 
 const db = getFirestore();
 
@@ -36,11 +37,14 @@ const db = getFirestore();
 
 
 export const acceptFriendRequest = onCall(
-  {region: "europe-west1"},
+  {
+    region: "europe-west1",
+    secrets: ["VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "BACKEND_EMAIL"],
+  },
   async (request) => {
     // extract who called acceptFriendRequest from the token
     const uid = request.auth?.uid;
-    if (!uid) throw new HttpsError("unauthenticated", "Non autenticato");
+    if (!uid) throw new HttpsError("unauthenticated", "Not authenticated");
 
     // take the argument (the id of the request)
     const {requestId} = request.data;
@@ -93,5 +97,16 @@ export const acceptFriendRequest = onCall(
     });
 
     await batch.commit();
+
+    const userSnap = await db.collection("users").doc(uid).get();
+    const username = userSnap.data()?.username;
+
+    await sendPushToUser(
+      friendRequest.fromUid,
+      "Friend request accepted",
+      `${ username } has accepted your friend request`,
+      "/home"
+    );
+
     return {success: true};
   });
