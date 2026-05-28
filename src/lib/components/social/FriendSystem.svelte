@@ -26,6 +26,8 @@
   let requestMessage = $state('');
   let requestHandleLoading = $state(false);
 
+  let sendingRequestLoading = $state(false);
+
   let friends = $state<Friend[]>([]);
   
   //load the friends's usernames
@@ -97,6 +99,7 @@
   }
 
   async function handleSendRequest() {
+    sendingRequestLoading = true;
     if (!searchResult) { return; }
     if (searchResult.uid === authStore.appUser!.uid){
       requestMessage = 'Cannot send a request to yourself';
@@ -120,6 +123,8 @@
         default:
           requestMessage = 'Sending error';
       }
+    }finally{
+      sendingRequestLoading = false;
     }
   }
 
@@ -160,7 +165,9 @@
 
   {#if searchResult}
     <p>Find: <strong>{searchResult.username}</strong></p>
-    <button onclick={handleSendRequest}>Send request</button>
+    <button onclick={handleSendRequest} disabled={sendingRequestLoading}>
+     {sendingRequestLoading ? 'Sending...' : 'Send'}
+    </button>
   {/if}
 
   {#if requestMessage}

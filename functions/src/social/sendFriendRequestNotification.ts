@@ -10,8 +10,6 @@ export const sendFriendRequestNotification = onCall(
     const uid = request.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "Not authenticated");
 
-    console.log("data ricevuta:", JSON.stringify(request.data));
-
     const {toUid, fromUsername} = request.data;
     if (!toUid || !fromUsername) {
       console.log("toUid:", toUid, "fromUsername:", fromUsername);

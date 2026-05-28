@@ -1,8 +1,6 @@
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from './clientSDK';
 import { PUBLIC_VAPID_KEY } from '$env/static/public';
-import { push } from 'firebase/database';
-
 
 //convert the vapid key from base 64 to Uint8Array (required by push API)
 // This conversion is mandatory because the browser's pushManager.subscribe() method strictly requires the applicationServerKey to be a raw binary byte array
@@ -43,7 +41,6 @@ export async function subscribeToPush(uid:string): Promise<void> {
 
     //register service worker
     const registration = await navigator.serviceWorker.ready;
-    console.log('service worker ready:', registration);
 
     //request the permission to send notification
     const permission = await Notification.requestPermission();
@@ -56,7 +53,6 @@ export async function subscribeToPush(uid:string): Promise<void> {
 
     //subscribe to push service
     try{
-
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)

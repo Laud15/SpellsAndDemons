@@ -66,7 +66,7 @@ export async function sendFriendRequest(toUid: string) {
 
   try {
     const notify = httpsCallable(functions, 'sendFriendRequestNotification');
-    const result = await notify({ toUid, fromUsername: currentUser.username });
+    await notify({ toUid, fromUsername: currentUser.username });
   } catch(e: any) {
     console.error("error in sending friend request notify");
   }
