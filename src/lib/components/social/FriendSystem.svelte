@@ -4,7 +4,6 @@
     sendFriendRequest,
     acceptFriendRequest,
     rejectFriendRequest,
-    getIncomingRequests
   } from '$lib/firebase/social';
   import { collection, query, where, onSnapshot } from 'firebase/firestore';
   import { db } from '$lib/firebase/clientSDK';

@@ -1,0 +1,101 @@
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  getDoc,
+  onSnapshot,
+  arrayUnion,
+  arrayRemove
+} from 'firebase/firestore';
+import { db, functions } from "./clientSDK";
+import { authStore } from '$lib/stores/auth.svelte';
+import { httpsCallable } from 'firebase/functions';
+import type { Lobby, LobbyPlayer } from '$lib/types';
+
+//create a new lobby
+export async function createLobby(): Promise<string>{
+    const currentUser = authStore.appUser;
+    if(!currentUser){ throw new Error("not authenticated");}
+
+    const player: LobbyPlayer = {
+        uid: currentUser.uid,
+        username: currentUser.username,
+    }
+
+    const ref = await addDoc(collection(db, 'lobbies'), {
+        hostId: currentUser.uid,
+        playerIds: [currentUser.uid], //for security rules
+        players: [player],
+        invitedIds: [],
+        status: 'waiting',
+        createdAt: new Date()
+    });
+
+    return ref.id
+}
+
+//enter in a lobby with an invite
+export async function joinLobby(lobbyId:string): Promise<void> {
+    const currentUser = authStore.appUser;
+    if(!currentUser){ throw new Error("not authenticated");}
+
+    const lobbyRef = doc(db, 'lobbies', lobbyId);
+    const snap = await getDoc(lobbyRef);
+
+    if (!snap.exists()) { throw { code: 'lobby/not-found' }; }
+    if (snap.data().status !== 'waiting') { throw { code: 'lobby/already-started' }; }
+    if (snap.data().players.length >= 4) { throw { code: 'lobby/full' }; }
+
+    const player: LobbyPlayer = {
+    uid: currentUser.uid,
+    username: currentUser.username
+    };
+
+    await updateDoc(lobbyRef, {
+        playerIds: arrayUnion(currentUser.uid),
+        players: arrayUnion(player),
+    });
+}
+
+//quit from the lobby
+export async function leaveLobby(lobbyId:string): Promise<void> {
+
+    const currentUser = authStore.appUser;
+    if (!currentUser) { throw new Error('Not authenticated');}
+
+    const lobbyRef = doc(db, 'lobbies', lobbyId);
+    const snap = await getDoc(lobbyRef);
+
+    const player: LobbyPlayer = {
+        uid: currentUser.uid,
+        username: currentUser.username
+    };
+
+    await updateDoc(lobbyRef, {
+        playerIds: arrayRemove(currentUser.uid),
+        players: arrayRemove(player)
+    });
+}
+
+export async function inviteToLobby(lobbyId:string, toUid: string): Promise<void> {
+    const currentUser = authStore.appUser;
+    if (!currentUser) { throw new Error('Not authenticated'); }
+    
+    const notify = httpsCallable(functions, 'sendLobbyInviteNotification');
+    await notify({
+        toUid,
+        fromUsername: currentUser.username,
+        lobbyId
+    });
+}
+
+//listen for lobby's changes
+export function subscribeLobby(lobbyId: string, callback: (lobby: Lobby) => void): () => void {
+    const lobbyRef = doc(db, 'lobbies', lobbyId);
+    return onSnapshot(lobbyRef, (snap) =>{
+        if(snap.exists()){
+            callback({ id: snap.id, ...snap.data() } as Lobby)
+        }
+    })
+}

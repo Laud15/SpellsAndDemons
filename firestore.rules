@@ -88,21 +88,21 @@ service cloud.firestore {
     // LOBBIES
     // -------------------------------------------------------
     match /lobbies/{lobbyId} {
-      //onyl lobby's member can read the lobby
+      //onyl lobby's member and invited users can read the lobby
       allow read: if isAuth()
-        && request.auth.uid in resource.data.players;
+        && (request.auth.uid in resource.data.playerIds || request.auth.uid in resource.data.invitedIds)
 
       //Only a logged-in user can create a lobby must be the host and the first player
       allow create: if isAuth()
         && request.resource.data.hostId == request.auth.uid
-        && request.resource.data.players.hasOnly([request.auth.uid])
-        && hasOnly(['hostId', 'players', 'status']);
+        && request.resource.data.status == 'waiting'
+        && hasOnly(['hostId', 'playerIds', 'players','invitedIds', 'status', 'createdAt']);
 
-      //Only members can update the lobby
+      //Only members or invited users can update the lobby
       //the status is managed by the Cloud Functions, not the client
       allow update: if isAuth()
-        && request.auth.uid in resource.data.players
-        && hasOnly(['players']);
+        && (request.auth.uid in resource.data.playerIds || request.auth.uid in resource.data.invitedIds)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playerIds', 'players', 'invitedIds']);
 
       allow delete: if false;
     }

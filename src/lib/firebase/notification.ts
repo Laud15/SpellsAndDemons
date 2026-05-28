@@ -44,7 +44,6 @@ export async function subscribeToPush(uid:string): Promise<void> {
 
     //request the permission to send notification
     const permission = await Notification.requestPermission();
-    console.log('permesso notifiche:', permission);
 
     if(permission !== 'granted'){
         console.warn('Notifications permission denied');

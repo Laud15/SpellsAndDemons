@@ -6,16 +6,13 @@ import {
   addDoc,
   updateDoc,
   doc,
-  arrayUnion,
-  writeBatch,
   getDoc
 } from 'firebase/firestore';
 
 import { db } from './clientSDK';
 import { authStore } from '$lib/stores/auth.svelte';
 import type { FriendRequest } from '$lib/types';
-import { error } from '@sveltejs/kit';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { httpsCallable } from 'firebase/functions';
 import { functions } from './clientSDK';
 
 
@@ -86,20 +83,4 @@ export async function rejectFriendRequest(requestId: string) {
   await updateDoc(doc(db, 'friendRequests', requestId), {
     status: 'rejected'
   });
-}
-
-
-//retrieve incoming requests
-export async function getIncomingRequests(): Promise<FriendRequest[]> {
-  const currentUser = authStore.appUser;
-  if (!currentUser) return [];
-
-  const q = query(
-    collection(db, 'friendRequests'),
-    where('toUid', '==', currentUser.uid),
-    where('status', '==', 'pending')
-  );
-
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as FriendRequest));
 }
