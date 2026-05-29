@@ -122,6 +122,8 @@ export async function startGame(lobbyId: string): Promise<void> {
 }
 
 //listen for lobby's changes
+//return the function to shutdown the observer (onSnapshot)
+//when on snapshot detect a change in the lobbyId document it calls the callback function with the lobby object as argumetn
 export function subscribeLobby(lobbyId: string, callback: (lobby: Lobby) => void): () => void {
     const lobbyRef = doc(db, 'lobbies', lobbyId);
     return onSnapshot(lobbyRef, (snap) =>{

@@ -8,7 +8,6 @@
   import { db } from '$lib/firebase/clientSDK';
   import { joinLobby } from '$lib/firebase/lobby';
   import type { Lobby } from '$lib/types';
-	import { join } from 'firebase/firestore/pipelines';
 
   let username = $derived(authStore.appUser?.username);
   let loading = $state(false);
@@ -65,6 +64,10 @@
 <h1>Home</h1>
 <p> welcome {username}!</p>
 <button onclick={handleLogout}>Logout</button>
+
+<div>
+<a href="/ranking">Ranking</a>
+</div>
 
 {#if pendingInvites.length > 0}
   <section>

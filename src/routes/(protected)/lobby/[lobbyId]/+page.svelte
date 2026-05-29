@@ -8,13 +8,10 @@
     startGame
     } from '$lib/firebase/lobby';
 
-
     import { page } from '$app/stores'
     import { goto } from '$app/navigation';
-    import { onMount } from 'svelte';
     import { authStore } from '$lib/stores/auth.svelte';
     import { lobbyStore } from '$lib/stores/lobby.svelte';
-    import type { Lobby } from '$lib/types';
     import { doc, getDoc } from 'firebase/firestore';
 
     import { collection, query, where, onSnapshot } from 'firebase/firestore';
