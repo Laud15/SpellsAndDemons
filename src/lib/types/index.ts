@@ -23,11 +23,11 @@ export interface LobbyPlayer {
 
 export interface Lobby{
   id: string;
-  hostId: string;
-  playerIds: string[];  
-  players: LobbyPlayer[];
-  invitedIds: string[];
-  status: 'waiting' | 'in_game';
+  hostId: string; //id of the lobby host
+  playerIds: string[]; //array of playerIds, this is usefull for security rules
+  players: LobbyPlayer[]; //for the ui
+  invitedIds: string[]; //id of who is invited and isn't in the lobby
+  status: 'waiting' | 'in_game' | 'closed';
   createdAt: Date;
 }
 

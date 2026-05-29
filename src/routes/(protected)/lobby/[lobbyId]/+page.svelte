@@ -1,9 +1,11 @@
 
 <script lang="ts">
     import {
+    joinLobby,
     subscribeLobby,
     leaveLobby,
-    inviteToLobby
+    inviteToLobby,
+    startGame
     } from '$lib/firebase/lobby';
 
 
@@ -13,34 +15,63 @@
     import { authStore } from '$lib/stores/auth.svelte';
     import { lobbyStore } from '$lib/stores/lobby.svelte';
     import type { Lobby } from '$lib/types';
+    import { doc, getDoc } from 'firebase/firestore';
 
     import { collection, query, where, onSnapshot } from 'firebase/firestore';
     import { db } from '$lib/firebase/clientSDK';
     import type { Friend } from '$lib/types';
 
-    let lobbyId = $derived($page.params.lobbyId);
+    let lobbyId = $derived($page.params.lobbyId as string);
     let lobby = $derived(lobbyStore.currentLobby);
     let isHost = $derived(lobby?.hostId === authStore.appUser?.uid);
     let error = $state('');
 
+    let inviteLoading = $state(false);
+    let startLoading = $state(false);
+    let leaveLoading = $state(false);
+
     let friendsData = $state<Friend[]>([]);
 
-    onMount(() => {
-        const unsubscribe = subscribeLobby(lobbyId!, (updatedLobby) =>{
-            lobbyStore.setLobby(updatedLobby);
+    $effect(() => {
+        const currentUser = authStore.appUser;
+        if (!currentUser) { return; }
+        let unsubscribe: (() => void) | null = null;
 
-            //if the game is started go to the game page
-            if (updatedLobby.status === 'in_game') {
-                goto(`/game/${lobbyId}`)
+        async function  init() {
+            
+            const lobbyRef = doc(db, 'lobbies', lobbyId);
+            const snap = await getDoc(lobbyRef);
+            if (!snap.exists()) { goto('/home'); return;}
+
+            const data = snap.data();
+            const isAlreadyIn = data.playerIds.includes(currentUser!.uid);
+            const isInvited = data.invitedIds.includes(currentUser!.uid);
+
+            //this is needed because an invited user can enter by click on invite's notification
+            if(!isAlreadyIn && isInvited){
+                await joinLobby(lobbyId);
+            }else if(!isAlreadyIn && !isInvited){
+                goto('home');
+                return;
             }
-        });
+        
+            unsubscribe = subscribeLobby(lobbyId, (updatedLobby) => {
+                lobbyStore.setLobby(updatedLobby);
+                if (updatedLobby.status === 'in_game') { goto(`/game/${lobbyId}`); }
+                if (updatedLobby.status === 'closed') { goto('/home'); }
+            });
+        }
+
+        init();
 
         return () => {
-            unsubscribe();
+            if (unsubscribe) { unsubscribe(); }
             lobbyStore.setLobby(null);
         };
     });
 
+
+    //retrieve the friend that can be invited in lobby
     $effect(() =>{
         const currentUser = authStore.appUser;
         if (!currentUser || currentUser.friends.length === 0) {
@@ -66,15 +97,36 @@
 
 
     async function handleLeave() {
-        await leaveLobby(lobbyId!);
-        goto('/home');
+        try{
+            leaveLoading = true;
+            await leaveLobby(lobbyId);
+            goto('/home');
+        }catch(e){
+            console.error("Error ocured during leaving lobby" + e);
+        }finally{
+            leaveLoading = false;
+        }
+    }
+
+    async function  handleStart() {
+        try{
+            startLoading = true;
+            await startGame(lobbyId);
+        }catch (e){
+            console.error("Error occured during the start of the game " + e);
+        }finally{
+            startLoading = false;
+        }
     }
 
     async function handleInvite(friendUid:string) {
         try {
-            await inviteToLobby(lobbyId!, friendUid);
+            inviteLoading = true;
+            await inviteToLobby(lobbyId, friendUid);
         } catch {
             error = 'Error during invite';
+        }finally{
+            inviteLoading = false;
         }
     }
 
@@ -107,8 +159,8 @@
         {#each friendsData as friend }
             <div>
                 <span>{friend.username}</span>
-                <button onclick={() => handleInvite(friend.uid)}>
-                Invite
+                <button onclick={() => handleInvite(friend.uid)} disabled={inviteLoading}>
+                    {inviteLoading ? 'Inviting...' : 'Invite'}
                 </button>
             </div>
         {/each}
@@ -119,12 +171,14 @@
     <p class="error">{error}</p>
   {/if}
 
-  <button onclick={handleLeave}>Quit</button>
+  <button onclick={handleLeave} disabled={leaveLoading}>
+    {leaveLoading ? 'Leaving...' : 'Quit'}
+  </button>
 
   {#if isHost}
-    <button onclick={() => goto(`/game/${lobbyId}`)}>
-      Start
-    </button>
+     <button onclick={handleStart} disabled={startLoading}>
+        {startLoading ? 'Starting...' : 'Start'}
+     </button>
   {/if}
 {:else}
   <p>Loading lobby...</p>

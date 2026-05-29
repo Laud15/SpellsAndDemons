@@ -44,7 +44,8 @@ export async function joinLobby(lobbyId:string): Promise<void> {
     const snap = await getDoc(lobbyRef);
 
     if (!snap.exists()) { throw { code: 'lobby/not-found' }; }
-    if (snap.data().status !== 'waiting') { throw { code: 'lobby/already-started' }; }
+    if (snap.data().status === 'in_game') { throw { code: 'lobby/already-started' }; }
+    if (snap.data().status === 'closed') { throw { code: 'lobby/is-closed' }; }
     if (snap.data().players.length >= 4) { throw { code: 'lobby/full' }; }
 
     const player: LobbyPlayer = {
@@ -66,16 +67,36 @@ export async function leaveLobby(lobbyId:string): Promise<void> {
 
     const lobbyRef = doc(db, 'lobbies', lobbyId);
     const snap = await getDoc(lobbyRef);
+    if (!snap.exists()) { return; }
+
+    const data = snap.data();
 
     const player: LobbyPlayer = {
         uid: currentUser.uid,
         username: currentUser.username
     };
 
-    await updateDoc(lobbyRef, {
-        playerIds: arrayRemove(currentUser.uid),
-        players: arrayRemove(player)
-    });
+    //if the host is leaving, give the host status to another player
+    if(data.hostId === currentUser.uid) {
+        const remaining = data.playerIds.filter((uid: string) => uid !== currentUser.uid);
+
+        //if there are no other player mark the lobby as closed
+        if(remaining.length === 0) {
+            await updateDoc(lobbyRef, {status: 'closed'});
+        } else {
+            //give the host at the first player in remaining
+            await updateDoc(lobbyRef, {
+                hostId: remaining[0],
+                playerIds: arrayRemove(currentUser.uid),
+                players: arrayRemove(player),
+            });
+        }
+    } else {
+        await updateDoc(lobbyRef, {
+            playerIds: arrayRemove(currentUser.uid),
+            players: arrayRemove(player)
+        });
+    }
 }
 
 export async function inviteToLobby(lobbyId:string, toUid: string): Promise<void> {
@@ -87,6 +108,16 @@ export async function inviteToLobby(lobbyId:string, toUid: string): Promise<void
         toUid,
         fromUsername: currentUser.username,
         lobbyId
+    });
+}
+
+export async function startGame(lobbyId: string): Promise<void> {
+    const currentUser = authStore.appUser;
+    if (!currentUser) { throw new Error('Not authenticated'); }
+
+    const lobbyRef = doc(db, 'lobbies', lobbyId);
+    await updateDoc(lobbyRef, {
+        status: 'in_game'
     });
 }
 

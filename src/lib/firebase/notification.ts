@@ -63,7 +63,7 @@ export async function subscribeToPush(uid:string): Promise<void> {
         })
         
     } catch(e) {
-        console.error('errore subscription:', e);
+        console.error('subscription error:', e);
     }
 
 }

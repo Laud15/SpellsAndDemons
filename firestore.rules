@@ -99,10 +99,10 @@ service cloud.firestore {
         && hasOnly(['hostId', 'playerIds', 'players','invitedIds', 'status', 'createdAt']);
 
       //Only members or invited users can update the lobby
-      //the status is managed by the Cloud Functions, not the client
+      //the status can be updated only by the host of the lobby
       allow update: if isAuth()
         && (request.auth.uid in resource.data.playerIds || request.auth.uid in resource.data.invitedIds)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playerIds', 'players', 'invitedIds']);
+        && (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playerIds', 'players', 'invitedIds']) || (resource.data.hostId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playerIds', 'players', 'status', 'hostId'])));
 
       allow delete: if false;
     }
