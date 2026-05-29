@@ -73,8 +73,8 @@
   <section>
     <h2>Pending invites</h2>
     {#each pendingInvites as invite}
-      <div>
-        <span>Invito di {invite.players[0].username}</span>
+      <div> <!-- note that the invite is always from the host, even if a member that isn't host is the real sender of the invite--> 
+        <span>Invite from {invite.players[0].username}</span>
         <button onclick={() => handleJoin(invite.id)}>Join</button>
       </div>
     {/each}

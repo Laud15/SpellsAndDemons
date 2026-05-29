@@ -15,6 +15,9 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
+      injectManifest: {
+        injectionPoint: 'self.__WB_MANIFEST'
+      },
       manifest: {
         name: 'Spells & Demons',
         short_name: 'S&D',
