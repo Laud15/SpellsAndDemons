@@ -16,7 +16,8 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.ts',
       injectManifest: {
-        injectionPoint: 'self.__WB_MANIFEST'
+        injectionPoint: 'self.__WB_MANIFEST',
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
       },
       manifest: {
         name: 'Spells & Demons',
@@ -36,24 +37,6 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable',
-          },
-        ],
-      },
-
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        navigateFallback: '/offline.html',
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'firestore-cache',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60,
-              },
-            },
           },
         ],
       },

@@ -22,12 +22,14 @@
     let lobby = $derived(lobbyStore.currentLobby);
     let isHost = $derived(lobby?.hostId === authStore.appUser?.uid);
     let error = $state('');
+    
 
     let inviteLoading = $state(false);
     let startLoading = $state(false);
     let leaveLoading = $state(false);
 
     let friendsData = $state<Friend[]>([]);
+    let availableFriendsToInvite = $derived(friendsData.filter(friend => !lobby?.players.some(p => p.uid === friend.uid)));
 
     $effect(() => {
         const currentUser = authStore.appUser;
@@ -67,7 +69,6 @@
         };
     });
 
-
     //retrieve the friend that can be invited in lobby
     $effect(() =>{
         const currentUser = authStore.appUser;
@@ -82,15 +83,13 @@
         );
 
         const unsubscribe = onSnapshot(q, (snap) =>{
-            const inLobbyUids = lobby?.players.map(p => p.uid) ?? [];
-            friendsData = snap.docs.map(d => ({ uid: d.data().uid, username: d.data().username})).filter(f => !inLobbyUids.includes(f.uid))
+            friendsData = snap.docs.map(d => ({ uid: d.data().uid, username: d.data().username}));
         });
 
         return () => {
             unsubscribe();
         }
-
-    })
+    });
 
 
     async function handleLeave() {
@@ -150,10 +149,10 @@
     {/each}
   </section>
 
-  {#if friendsNotInLobby.length > 0}
+  {#if availableFriendsToInvite.length > 0}
     <section>
       <h2>Invite friends</h2>
-        {#each friendsData as friend }
+        {#each availableFriendsToInvite as friend }
             <div>
                 <span>{friend.username}</span>
                 <button onclick={() => handleInvite(friend.uid)} disabled={inviteLoading}>

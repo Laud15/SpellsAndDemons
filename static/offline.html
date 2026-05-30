@@ -1,26 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Spells and Demons — Offline</title>
-  <style>
-    body {
-      background: #1a1a2e;
-      color: #e0e0e0;
-      font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-    }
-    h1 { color: #a855f7; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spells and Demons - Offline</title>
+    <meta name="theme-color" content="#4B365F">
+    <link rel="icon" href="/icons/skull_192.png">
+    
+    <style>
+        body {
+            background-color: #037124;
+            color: #f5f5f5;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 500px;
+            background: #2a2a2a;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+            border: 2px solid #4B365F;
+        }
+
+        h1 {
+            color: #910bb6; 
+            margin-bottom: 10px;
+        }
+
+        p {
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .loader {
+            border: 4px solid #333;
+            border-top: 4px solid #910bb6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-  <h1>You are offline</h1>
-  <p>Check your connection and try again.</p>
+
+    <div class="container">
+        <h1>You are Offline</h1>
+        <p>It seems that your connection to the dark arts has been severed.<br>Check your connections.</p>
+        
+        <div class="loader"></div>
+        <p style="margin-top: 20px; font-size: 0.9em; color: #888;">
+            Waiting for reconnection...
+        </p>
+    </div>
+
+    <script>
+      
+        function checkAndReload() {
+            window.location.reload();
+        }
+
+        //Listen to the native event
+        window.addEventListener('online', checkAndReload);
+
+        //Fallback for DevTools or "ghost connections" (Wi-Fi connected but no internet)
+        //Check every 3 seconds, but ONLY if the browser thinks it's online
+        setInterval(async () => {
+            if (navigator.onLine) {
+                try {
+                    // Let's do a tiny "ping" to the manifest by forcing the cache bypass.
+                    //If the server responds 200 OK, we are really online.
+                    const response = await fetch('/manifest.webmanifest', { 
+                        method: 'HEAD', 
+                        cache: 'no-store' 
+                    });
+                    
+                    if (response.ok) { checkAndReload();}
+                } catch (error) {
+                    // The fetch fails if we are still offline we don't do anything and let the animation run.
+                }
+            }
+        }, 3000);
+    </script>
 </body>
 </html>

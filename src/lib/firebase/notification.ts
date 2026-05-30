@@ -39,16 +39,11 @@ export async function subscribeToPush(uid:string): Promise<void> {
         return;
     }
 
-    console.log('SW state:', (await navigator.serviceWorker.getRegistration())?.active?.state);
-  
-
     //register service worker
     const registration = await navigator.serviceWorker.ready;
-    console.log('SW ready');
 
     //request the permission to send notification
     const permission = await Notification.requestPermission();
-    console.log('permission:', permission);
 
     if(permission !== 'granted'){
         console.warn('Notifications permission denied');
@@ -61,12 +56,12 @@ export async function subscribeToPush(uid:string): Promise<void> {
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
         });
-        console.log('subscription creata:', subscription.endpoint);
+       
         //save the subscription on firestore
         await updateDoc(doc(db, 'users', uid), {
             pushSubscription: subscription.toJSON(),
         })
-        console.log('subscription salvata su Firestore');
+        
     } catch(e) {
         console.error('subscription error:', e);
     }

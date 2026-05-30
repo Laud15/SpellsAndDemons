@@ -26,6 +26,23 @@ onSnapshot (Firestore):
     let { children } = $props();
 
     onMount(() =>{ 
+       
+        if ('serviceWorker' in navigator) { // Check whether the browser supports Service Workers
+            import('virtual:pwa-register') // Dynamically import the PWA registration helper provided by vite-plugin-pwa
+                .then(({ registerSW }) => { // Extract the Service Worker registration function
+                    registerSW({  // Register the Service Worker
+                        immediate: true,  // Register and activate the Service Worker immediately
+                        onRegistered(r: any) { // Called when the Service Worker is successfully registered
+                            console.log('Service Worker successfully registered:', r);
+                        },
+                        onRegisterError(error: any) { // Called if an error occurs during registration
+                            console.error('Error in Service Worker Registration:', error);
+                        }
+                    });
+                })
+                .catch((err) => console.error('Unable to import virtual:pwa-register', err));   // Handle errors that occur while importing the registration module
+        }
+
         let unsubscribeSnapshot: (()=>void) | null = null;
 
         const unsubscribeAuth = onAuthStateChanged(auth, (user)=>{
