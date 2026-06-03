@@ -16,6 +16,7 @@
 
         const unsubscribe = onSnapshot(q, (snap) =>{
             rankingList = snap.docs.map(d => ({...d.data()} as AppUser))
+            rankingList.sort((a, b) => b.score - a.score)
         });
 
         return () =>{

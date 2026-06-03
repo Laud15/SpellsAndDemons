@@ -33,6 +33,7 @@ export async function sendPushToUser(
       subscription,
       JSON.stringify({title, body, url})
     );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     if (error.statusCode === 410) {
       await db.collection("users").doc(uid).update({

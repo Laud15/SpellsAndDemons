@@ -178,7 +178,7 @@
 <section>
   <h2>Incoming requests</h2>
   {#if incomingRequests.length === 0}
-    <p>Ther are not incoming requests</p>
+    <p>There are not incoming requests</p>
   {:else}
     {#each incomingRequests as request}
       <div>

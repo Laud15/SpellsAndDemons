@@ -30,6 +30,7 @@
       "codebase": "default",
       "disallowLegacyRuntimeConfig": true,
       "ignore": [
+        "src/seed/**",
         "node_modules",
         ".git",
         "firebase-debug.log",

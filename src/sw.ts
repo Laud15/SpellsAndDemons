@@ -7,6 +7,10 @@ import { NetworkOnly } from 'workbox-strategies';
 declare const self: ServiceWorkerGlobalScope;
 
 precacheAndRoute(self.__WB_MANIFEST);
+
+//policy of caching
+//The SW does not try to intercept communications between the client and the Firebase server
+//this is because the app uses different streams (e.g. onSnapshto) that cannot be stored in the cache
 registerRoute(new NavigationRoute(new NetworkOnly()));
 
 //Fallback Offline 

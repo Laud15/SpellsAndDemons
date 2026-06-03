@@ -16,12 +16,6 @@ service cloud.firestore {
       return request.auth.uid == uid;
     }
 
-    // check that the fields of the request are exactly those expected
-    // avoid that the client put non expected fields
-    function hasOnly(fields) {
-      return request.resource.data.keys().hasOnly(fields);
-    }
-
     // -------------------------------------------------------
     // USERS
     // -------------------------------------------------------
@@ -31,8 +25,7 @@ service cloud.firestore {
 
       //Only the owner can create their own document and only with the expected fields
       allow create: if isOwner(uid) 
-        && hasOnly(['uid', 'username', 'email', 'score', 'friends','pushSubscription', 'createdAt']);
-
+        && request.resource.data.keys().hasOnly(['uid', 'username', 'email', 'score', 'friends','pushSubscription', 'createdAt']);
       //Only the owner can update their profile
       // But it can't edit UID, email, and points on its own
       // (score is changed only by Cloud Functions)
@@ -96,13 +89,29 @@ service cloud.firestore {
       allow create: if isAuth()
         && request.resource.data.hostId == request.auth.uid
         && request.resource.data.status == 'waiting'
-        && hasOnly(['hostId', 'playerIds', 'players','invitedIds', 'status', 'createdAt']);
+        && request.resource.data.keys().hasOnly(['hostId', 'playerIds', 'players', 'invitedIds', 'status', 'createdAt']);
 
       //Only members or invited users can update the lobby
       //the status can be updated only by the host of the lobby
       allow update: if isAuth()
-        && (request.auth.uid in resource.data.playerIds || request.auth.uid in resource.data.invitedIds)
-        && (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playerIds', 'players', 'invitedIds']) || (resource.data.hostId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playerIds', 'players', 'status', 'hostId'])));
+       && (
+          request.auth.uid in resource.data.playerIds
+          ||
+           request.auth.uid in resource.data.invitedIds
+          )
+      && (
+          (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playerIds', 'players', 'invitedIds'])
+            && 
+            request.resource.data.playerIds.size() <= 4
+          )
+          ||
+          (
+            resource.data.hostId == request.auth.uid
+            && 
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['playerIds', 'players', 'hostId', 'status', 'invitedIds'])
+          )
+        );
 
       allow delete: if false;
     }
@@ -121,13 +130,29 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------
-    // SCROLLS (spells catalogue)
+    // SCROLLS 
     // -------------------------------------------------------
     match /scrolls/{scrollId} {
       //Everyone can read the catalogue
       allow read: if isAuth();
 
       //No one can change it from the client
+      allow create, update, delete: if false;
+    }
+
+    // -------------------------------------------------------
+    // STATUSES
+    // -------------------------------------------------------
+    match /statuses/{statusId} {
+      allow read: if isAuth();
+      allow create, update, delete: if false;
+    }
+
+    // -------------------------------------------------------
+    // ENEMIES
+    // -------------------------------------------------------
+    match /enemies/{enemyId} {
+      allow read: if isAuth();
       allow create, update, delete: if false;
     }
 

@@ -9,3 +9,14 @@ export {acceptFriendRequest} from "./social/acceptFriendRequest";
 export {sendFriendRequestNotification} from "./social/sendFriendRequestNotification";
 
 export {sendLobbyInviteNotification} from "./lobby/sendLobbyInviteNotification";
+
+export {startGame} from "./game/startGame";
+
+export {performAction} from "./game/performAction";
+
+export {chooseDrop} from "./game/chooseDrop";
+
+export {levelUp} from "./game/levelUp";
+
+export {skipDrop} from "./game/skipDrop";
+

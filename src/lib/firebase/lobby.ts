@@ -6,7 +6,8 @@ import {
   getDoc,
   onSnapshot,
   arrayUnion,
-  arrayRemove
+  arrayRemove,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { db, functions } from "./clientSDK";
 import { authStore } from '$lib/stores/auth.svelte';
@@ -29,7 +30,7 @@ export async function createLobby(): Promise<string>{
         players: [player],
         invitedIds: [],
         status: 'waiting',
-        createdAt: new Date()
+        createdAt: serverTimestamp()
     });
 
     return ref.id
@@ -49,8 +50,8 @@ export async function joinLobby(lobbyId:string): Promise<void> {
     if (snap.data().players.length >= 4) { throw { code: 'lobby/full' }; }
 
     const player: LobbyPlayer = {
-    uid: currentUser.uid,
-    username: currentUser.username
+        uid: currentUser.uid,
+        username: currentUser.username
     };
 
     await updateDoc(lobbyRef, {
@@ -112,13 +113,8 @@ export async function inviteToLobby(lobbyId:string, toUid: string): Promise<void
 }
 
 export async function startGame(lobbyId: string): Promise<void> {
-    const currentUser = authStore.appUser;
-    if (!currentUser) { throw new Error('Not authenticated'); }
-
-    const lobbyRef = doc(db, 'lobbies', lobbyId);
-    await updateDoc(lobbyRef, {
-        status: 'in_game'
-    });
+    const fn = httpsCallable(functions, 'startGame');
+    await fn({ lobbyId });
 }
 
 //listen for lobby's changes

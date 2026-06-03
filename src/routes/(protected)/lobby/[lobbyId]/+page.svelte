@@ -15,7 +15,7 @@
     import { doc, getDoc } from 'firebase/firestore';
 
     import { collection, query, where, onSnapshot } from 'firebase/firestore';
-    import { db } from '$lib/firebase/clientSDK';
+    import { auth, db } from '$lib/firebase/clientSDK';
     import type { Friend } from '$lib/types';
 
     let lobbyId = $derived($page.params.lobbyId as string);
@@ -126,12 +126,6 @@
         }
     }
 
-    let friendsNotInLobby = $derived(
-        (authStore.appUser?.friends ?? []).filter(
-            uid => !lobby?.players.some(p => p.uid === uid)
-        )
-    );
-
 </script>
 
 <h1>Lobby</h1>
@@ -149,33 +143,35 @@
     {/each}
   </section>
 
-  {#if availableFriendsToInvite.length > 0}
-    <section>
-      <h2>Invite friends</h2>
-        {#each availableFriendsToInvite as friend }
-            <div>
-                <span>{friend.username}</span>
-                <button onclick={() => handleInvite(friend.uid)} disabled={inviteLoading}>
-                    {inviteLoading ? 'Inviting...' : 'Invite'}
-                </button>
-            </div>
-        {/each}
-    </section>
-  {/if}
+{#if authStore.appUser?.uid == lobby.hostId} <!-- only the host can invite other player -->
+    {#if availableFriendsToInvite.length > 0}
+        <section>
+        <h2>Invite friends</h2>
+            {#each availableFriendsToInvite as friend }
+                <div>
+                    <span>{friend.username}</span>
+                    <button onclick={() => handleInvite(friend.uid)} disabled={inviteLoading}>
+                        {inviteLoading ? 'Inviting...' : 'Invite'}
+                    </button>
+                </div>
+            {/each}
+        </section>
+    {/if}
+{/if}
 
-  {#if error}
+{#if error}
     <p class="error">{error}</p>
-  {/if}
+{/if}
 
-  <button onclick={handleLeave} disabled={leaveLoading}>
+<button onclick={handleLeave} disabled={leaveLoading}>
     {leaveLoading ? 'Leaving...' : 'Quit'}
-  </button>
+</button>
 
-  {#if isHost}
-     <button onclick={handleStart} disabled={startLoading}>
+{#if isHost}
+    <button onclick={handleStart} disabled={startLoading}>
         {startLoading ? 'Starting...' : 'Start'}
-     </button>
-  {/if}
+    </button>
+{/if}
 {:else}
   <p>Loading lobby...</p>
 {/if}
