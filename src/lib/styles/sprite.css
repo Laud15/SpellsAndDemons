@@ -1,0 +1,59 @@
+/* ---- SPRITE BASE ---- */
+.sprite {
+  width: 128px;   
+  height: 128px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background-repeat: no-repeat;
+  background-size: auto 128px; 
+  flex-shrink: 0;
+}
+
+/* ---- IDLE (frame 0-1, loop) ---- */
+@keyframes sprite-idle {
+  0%   { background-position-x: 0px; }
+  50%  { background-position-x: -128px; }
+  100% { background-position-x: 0px; }
+}
+
+.anim-idle {
+  animation: sprite-idle 0.8s steps(1) infinite;
+}
+
+/* ---- ATTACK (frame 2-6, then idle) ---- */
+@keyframes sprite-attack {
+  0%   { background-position-x: -256px; }
+  20%  { background-position-x: -384px; }
+  40%  { background-position-x: -512px; }
+  60%  { background-position-x: -640px; }
+  80%  { background-position-x: -768px; }
+  100% { background-position-x: -768px; }
+}
+
+.anim-attack {
+  animation: sprite-attack 0.9s steps(1) forwards;
+}
+
+/* ---- HIT (frame 7-8) ---- */
+@keyframes sprite-hit {
+  0%   { background-position-x: -896px; }
+  50%  { background-position-x: -1024px; }
+  100% { background-position-x: -1024px; }
+}
+
+.anim-hit {
+  animation: sprite-hit 0.6s steps(1) forwards;
+}
+
+/* ---- DEATH (frame 9-13) ---- */
+@keyframes sprite-death {
+  0%   { background-position-x: -1152px; }
+  25%  { background-position-x: -1280px; }
+  50%  { background-position-x: -1408px; }
+  75%  { background-position-x: -1536px; }
+  100% { background-position-x: -1664px; }
+}
+
+.anim-death {
+  animation: sprite-death 1.5s steps(1) forwards;
+}

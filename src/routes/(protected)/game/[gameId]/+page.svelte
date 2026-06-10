@@ -16,6 +16,11 @@
     import { db } from '$lib/firebase/clientSDK';
     import type { ScrollData } from '$lib/types';
 
+    import Sprite from '$lib/components/game/sprite.svelte';
+
+    import '$lib/styles/game.css';
+    import '$lib/styles/sprite.css';
+
     let scrollsData = $state<Record<string, ScrollData>>({});
 
     let gameId = $derived($page.params.gameId as string);
@@ -29,6 +34,7 @@
     let loading = $state(false);
     let showReplaceModal = $state(false);
     let pendingDropScrollId = $state<string | null>(null);
+    let deadEnemies = $state<GameEnemy[]>([]);
 
     //utils derived
     let myPlayer = $derived(game?.players.find(p => p.uid === myUid) ?? null);
@@ -36,11 +42,27 @@
     let isDropChooser = $derived(game?.phase === 'drop_phase' && game?.players[game?.dropChooserIndex]?.uid === myUid);
     let isLevelUp = $derived(game?.phase === 'level_up' && game?.pendingLevelUps.includes(myUid));
 
-  //background picture, change based on wins
+    //animation
+    const ANIM_DELAY = 600;  //ms between one animation and another one
+    let playerAnims = $state<Record<string, 'idle' | 'attack' | 'hit' | 'death'>>({});
+    let enemyAnims = $state<Record<string, 'idle' | 'attack' | 'hit' | 'death'>>({});
+
+    let prevGame = $state<Game | null>(null);
+    let gameOverCountdown = $state(5);
+    let gameOverInterval: ReturnType<typeof setInterval> | null = null;
+    
+    //queue for serialize animation
+    let animQueue = Promise.resolve();
+
+    function enqueueAnim(fn: () => Promise<void>) {
+        animQueue = animQueue.then(fn).catch(() => {});
+    }
+
+    //background picture, change based on wins
     let background = $derived(() =>{
         const wins = game?.winsCount ?? 0;
-        if (wins <  10) { return '/backgrounds/castle.png';}
-        if (wins <  20) { return '/backgrounds/lab.png';}
+        if (wins <  3) { return '/backgrounds/castle.png';}
+        if (wins <  6) { return '/backgrounds/lab.png';}
         return '/backgrounds/inferno.png'
     });
 
@@ -61,18 +83,35 @@
         if (!gId) { return; }
 
         const unsubscribe = subscribeGame(gId, async (updatedGame) => {
-                const prev = gameStore.currentGame;
-
+                const snapshot = prevGame;
                 //generate combat log's message
-                if (prev && updatedGame) {
-                    generateLogs(prev, updatedGame);
+                if (snapshot && updatedGame) {
+                    enqueueAnim(() => generateLogs(snapshot, updatedGame));
+                } else {
+                    updatedGame.players.forEach(p => {
+                        playerAnims[p.uid] = 'idle';
+                    });
+                    updatedGame.enemies.forEach(e =>{
+                        enemyAnims[e.instanceId] = 'idle';
+                    });
+                    playerAnims = {...playerAnims};
+                    enemyAnims = {...enemyAnims};
                 }
 
+                prevGame = updatedGame;
                 gameStore.setGame(updatedGame);
 
-                if (updatedGame.phase === 'game_over') {
+                if (updatedGame.phase === 'game_over'  && !gameOverInterval) {
                     await tick();
-                    setTimeout(() => goto('/home'), 3000);
+                    gameOverCountdown = 5;
+                    gameOverInterval = setInterval(() => {
+                        gameOverCountdown--;
+                        if (gameOverCountdown <= 0) {
+                            clearInterval(gameOverInterval!);
+                            gameOverInterval = null;
+                            goto('/home');
+                        }
+                    }, 1000);
                 }
             });
 
@@ -80,11 +119,57 @@
                 unsubscribe();
                 gameStore.setGame(null);
                 gameStore.clearLog();
-            }
+                prevGame = null;
+                if (gameOverInterval) {
+                    clearInterval(gameOverInterval);
+                    gameOverInterval = null;
+                }   
+        };
     });
 
+    //update animation when game state change
+    $effect(() => {
+        if (!game) {return;}
+        //intialize with idle animation for all the actors
+        game.players.forEach(p => {
+            if (!playerAnims[p.uid]) { playerAnims[p.uid] = 'idle'; }
+            if (p.stats.hp <= 0 && playerAnims[p.uid] !== 'death') {
+                playerAnims[p.uid] = 'death';
+            }
+        });
 
-    function generateLogs(prev: Game, next: Game) {
+        game.enemies.forEach(e => {
+            //only if it does not yet exist
+            if (!(e.instanceId in enemyAnims)) {
+                enemyAnims[e.instanceId] = 'idle';
+            }
+        });
+    });
+
+    //when a player attack call this function
+    function triggerAttackAnim(actorId: string, isEnemy: boolean) {
+        if (isEnemy) {
+            enemyAnims[actorId] = 'attack';
+            enemyAnims = {...enemyAnims};
+        } else {
+            playerAnims[actorId] = 'attack';
+            playerAnims = {...playerAnims};
+        }
+    }
+
+    // chiama questo quando qualcuno viene colpito
+    function triggerHitAnim(targetId: string, isEnemy: boolean) {
+        if (isEnemy) {
+            enemyAnims[targetId] = 'hit';
+            enemyAnims = {...enemyAnims};
+        } else {
+            playerAnims[targetId] = 'hit';
+            playerAnims = {...playerAnims};
+        }
+    }
+
+   async function generateLogs(prev: Game, next: Game) {
+        
         //log for damage dealt to enemies
         for(const nextEnemy of next.enemies) {
             const prevEnemy = prev.enemies.find(
@@ -92,7 +177,9 @@
             )
             if(prevEnemy && nextEnemy.hp < prevEnemy.hp) {
                 const dmg = prevEnemy.hp - nextEnemy.hp;
-                gameStore.addLog(`${nextEnemy.name} take ${dmg} damage`);
+                gameStore.addLog(`⚔️  ${nextEnemy.name} take ${dmg} damage`, 'damage-enemy');
+                triggerHitAnim(nextEnemy.instanceId, true);
+                await new Promise(r => setTimeout(r, ANIM_DELAY));
             }
         }
 
@@ -102,24 +189,75 @@
                 e => e.instanceId === prevEnemy.instanceId
             );
             if (!stillAlive) {
-                gameStore.addLog(`${prevEnemy.name} has been defeated`);
+                
+                deadEnemies = [...deadEnemies, prevEnemy];
+                enemyAnims[prevEnemy.instanceId] = 'death';
+                enemyAnims = {...enemyAnims};
+
+                gameStore.addLog(`💀 ${prevEnemy.name} defeated`, 'death');
+                await new Promise(r => setTimeout(r, ANIM_DELAY * 1.5));//death is longer
+
+                deadEnemies = deadEnemies.filter(
+                    e => e.instanceId !== prevEnemy.instanceId
+                );
             }
         }
 
-        //log for damage dealt to players
+        
         for (const nextPlayer of next.players) {
             const prevPlayer = prev.players.find(p => p.uid === nextPlayer.uid);
-            if (prevPlayer && nextPlayer.stats.hp < prevPlayer.stats.hp) {
+            if (!prevPlayer) continue;
+            //player take damage
+            if (nextPlayer.stats.hp < prevPlayer.stats.hp) {
                 const dmg = prevPlayer.stats.hp - nextPlayer.stats.hp;
-                gameStore.addLog(`${nextPlayer.username} take ${dmg} damage`);
+
+                //find the enemy that have spent energy
+                const attackingEnemy = (() =>{
+                    //use prev's currentActorIndex (is the enemy that has just performed)
+                    const prevActorId = prev.turnOrder[prev.currentActorIndex];
+                    const actorEnemy = prev.enemies.find(e => e.instanceId === prevActorId);
+                    if (actorEnemy) { return actorEnemy; }
+                    
+                    //search who has spent energy
+                    const byEnergy = prev.enemies.find(prevE => {
+                        const nextE = next.enemies.find(e => e.instanceId === prevE.instanceId);
+                        if (nextE) { return nextE.energy < prevE.energy;}
+                        return (prevE.energy > 0)
+                    });
+                    if (byEnergy) { return byEnergy; }
+
+                    //first alive enemy
+                    return prev.enemies.find(e =>
+                        next.enemies.some(ne => ne.instanceId === e.instanceId && ne.hp > 0)
+                    );
+                })();
+
+                if (attackingEnemy) {
+                    //show enemy attack
+                    enemyAnims[attackingEnemy.instanceId] = 'attack';
+                    enemyAnims = {...enemyAnims};
+                    await new Promise(r => setTimeout(r, ANIM_DELAY));
+                }
+
+                gameStore.addLog(`🩸 ${nextPlayer.username} take ${dmg} damage`, 'damage-player');
+                triggerHitAnim(nextPlayer.uid, false);
+                await new Promise(r => setTimeout(r, ANIM_DELAY));
             }
-            if (prevPlayer && nextPlayer.stats.hp > prevPlayer.stats.hp) {
+            //player get healed
+            if (nextPlayer.stats.hp > prevPlayer.stats.hp) {
                const heal = nextPlayer.stats.hp - prevPlayer.stats.hp;
-               gameStore.addLog(` ${nextPlayer.username} recovery ${heal} HP`);
+               gameStore.addLog(`💚 ${nextPlayer.username} recovery ${heal} HP`, 'heal');
+            }
+            //player died
+            if (nextPlayer.stats.hp <= 0 && prevPlayer.stats.hp > 0) {
+                await new Promise(r => setTimeout(r, ANIM_DELAY));
+                playerAnims[nextPlayer.uid] = 'death';
+                playerAnims = {...playerAnims};
+                await new Promise(r => setTimeout(r, ANIM_DELAY * 1.5));
             }
         }
 
-        //log for applied status
+        //log for applied status to enemies
         for (const nextEnemy of next.enemies) {
             const prevEnemy = prev.enemies.find(e => e.instanceId === nextEnemy.instanceId);
             if (!prevEnemy) continue;
@@ -127,8 +265,10 @@
             for (const status of nextEnemy.activeStatuses ?? []) {
                 const hadStatus = prevEnemy.activeStatuses.find(s => s.id === status.id);
                 if (!hadStatus) {
-                    gameStore.addLog(`${nextEnemy.name} is affected by ${status.id}`);
+                    gameStore.addLog(`⬇️ ${nextEnemy.name} is affected by ${status.id}`, 'status-enemy');
                 }
+                triggerHitAnim(nextEnemy.instanceId, true);
+                await new Promise(r => setTimeout(r, ANIM_DELAY));
             }
         }
 
@@ -140,21 +280,21 @@
             for (const status of nextPlayer.activeStatuses ?? []) {
                 const hadStatus = prevPlayer.activeStatuses.find(s => s.id === status.id);
                 if (!hadStatus) {
-                    gameStore.addLog(`${nextPlayer.username} is affected by ${status.id}`);
+                    gameStore.addLog(`🌀 ${nextPlayer.username} is affected by ${status.id}`, 'status-player');
                 }
+                triggerHitAnim(nextPlayer.uid, false);
+                await new Promise(r => setTimeout(r, ANIM_DELAY));
             }
         }
 
         //log phase
         if(prev.phase !== next.phase) {
             if (next.phase === 'drop_phase') {
-                gameStore.addLog('Drop phase');
+                deadEnemies = [];
+                gameStore.addLog('📜 Drop phase', 'phase');
             }
             if (next.phase === 'level_up') {
-                gameStore.addLog('Level up!');
-            }
-            if (next.phase === 'game_over') {
-                gameStore.addLog('GAME OVER!');
+                gameStore.addLog('💡 Level up!', 'phase');
             }
         }
     }
@@ -164,9 +304,11 @@
         if (!selectedScrollId || !game) { return; }
         const scroll = myPlayer?.moves.find(m => m.scrollId === selectedScrollId);
         if (!scroll) { return; }
+        loading = true;
+        triggerAttackAnim(myUid, false);
+        await new Promise(r => setTimeout(r, ANIM_DELAY));
 
         //Multi-target moves do not require target
-        loading = true;
         try {
             await performAction(gameId, {
                 type: 'attack',
@@ -178,15 +320,20 @@
         } finally { 
             loading = false
         }
+        await new Promise(r => setTimeout(r, ANIM_DELAY))
     }
 
     async function handleDefend() {
         loading = true;
+
+        playerAnims[myUid] = 'hit';
+        playerAnims = {...playerAnims};
         try {
             await performAction(gameId, { type: 'defend' });
         } finally {
             loading = false;
         }
+        await new Promise(r => setTimeout(r, ANIM_DELAY))
     }
 
     async function handleChooseDrop(scrollId: string) {
@@ -230,8 +377,6 @@
         }
     }
 
-
-
     async function handleLevelUp(stat: 'will' | 'knowledge' | 'intuition' | 'cunning') {
         loading = true;
         try {
@@ -271,13 +416,13 @@
                                 selectedTargetId = player.uid;
                             }
                         }}
-                       
+                        aria-label={player.username}
+                        disabled={player.stats.hp <= 0}
                     >
-                        <img
-                        src="/sprites/{player.sprite}_idle.png"
-                        alt={player.username}
-                        class="sprite"
-                        />
+                        <Sprite
+                            spriteName = {player.sprite}
+                            animation={playerAnims[player.uid] ?? 'idle'}
+                        /> 
                         <!-- life bar -->
                         <div class="player-hp-bar">
                             <div
@@ -292,6 +437,15 @@
                                 style="width: {(player.stats.energy /player.stats.maxEnergy) *100}%"
                             ></div>
                         </div>
+
+                        <!--active status -->
+                        {#if player.activeStatuses.length > 0}
+                            <div class="enemy-statuses">
+                                {#each player.activeStatuses ?? [] as status}
+                                    <span class="status-badge enemy-status">{status.id}</span>
+                                {/each}
+                            </div>
+                        {/if}
 
                         {#if player.stats.hp <= 0}
                             <span class="dead-label">DEAD</span>
@@ -314,11 +468,11 @@
                                 selectedTargetId = enemy.instanceId;
                             }
                         }}
+                        aria-label={enemy.name}
                     >
-                        <img
-                            src = "/sprites/{enemy.sprite}_idle.png"
-                            alt = {enemy.name}
-                            class="sprite"
+                        <Sprite
+                            spriteName={enemy.sprite}
+                            animation={enemyAnims[enemy.instanceId] ?? 'idle'}
                         />
 
                         <!-- enemy life bar-->
@@ -346,8 +500,17 @@
                         {/if}
                     </button>
                 {/each}
-            </div>
 
+                {#each deadEnemies as enemy}
+                    <div class="sprite-container dead">
+                        <Sprite
+                            spriteName={enemy.sprite}
+                            animation="death"
+                        />
+                        <span class="enemy-name">{enemy.name}</span>
+                     </div>
+                {/each}
+            </div>
         </div>
 
         <div class="turn-order">
@@ -407,7 +570,7 @@
 
                         {#if !isMyTurn && game.phase === 'player_turn'}
                             <p class="turn-warning">
-                                Waiting for {game.players.find(p => p.uid === game.turnOrder[game.currentActorIndex])?.username}'s turn...
+                                Waiting for {game.players.find(p => p.uid === game.turnOrder[game.currentActorIndex])?.username ?? 'enemy'}'s turn...
                             </p>
                         {/if}
                         {#each myPlayer.moves as move}
@@ -479,20 +642,11 @@
             <!-- LEVEL UP -->
             {#if isLevelUp}
                 <div class="levelup-panel">
-                    <h3>Level Up! Scegli una statistica</h3>
-                    <button onclick={() => handleLevelUp('will')}>Will (+ HP)</button>
-                    <button onclick={() => handleLevelUp('knowledge')}>Knowledge (+ Energy)</button>
-                    <button onclick={() => handleLevelUp('intuition')}>Intuition (+ Priority)</button>
-                    <button onclick={() => handleLevelUp('cunning')}>Cunning (+ Energy regen)</button>
-                </div>
-            {/if}
-
-            <!-- GAME OVER -->
-            {#if game.phase === 'game_over'}
-                <div class="gameover-panel">
-                    <h2>Game Over</h2>
-                    <p>:Levels Exceeded {game.winsCount}</p>
-                    <p>Back to home...</p>
+                    <h3>Level Up! Choose one stats</h3>
+                    <button onclick={() => handleLevelUp('will')} disabled={loading}>Will (+ HP)</button>
+                    <button onclick={() => handleLevelUp('knowledge')}  disabled={loading}>Knowledge (+ Energy)</button>
+                    <button onclick={() => handleLevelUp('intuition')}  disabled={loading}>Intuition (+ Priority)</button>
+                    <button onclick={() => handleLevelUp('cunning')}  disabled={loading}>Cunning (+ Energy regen)</button>
                 </div>
             {/if}
 
@@ -503,7 +657,7 @@
                     <p>Will: {myPlayer.stats.will}</p>
                     <p>Knowledge: {myPlayer.stats.knowledge}</p>
                     <p>Intuition: {myPlayer.stats.intuition}</p>
-                    <p>Cunning: {myPlayer.stats.cunning}</p>
+                    <p>Cunning: {myPlayer.stats.cunning} | Energy Reg. : {5 + (myPlayer.stats.cunning * 2)}</p>
                     <p>Level: {myPlayer.stats.level}</p>
                     {#if myPlayer.activeStatuses.length>0}
                         <h4>Active status</h4>
@@ -517,7 +671,7 @@
             <!-- COMBAT LOG -->
             <div class="combat-log">
                 {#each gameStore.combatLog as entry}
-                <p>{entry}</p>
+                <p class="log-{entry.type}">{entry.message}</p>
                 {/each}
             </div>
         </div>
@@ -546,442 +700,17 @@
         </div>
     {/if}
 
-
+    <!-- GAME OVER -->
     {#if game.phase === 'game_over'}
         <div class="gameover-overlay">
             <div class="gameover-content">
                 <h1>Game Over</h1>
-                <p>total win: {game.winsCount}</p>
-                <p>points earned: {game.winsCount * 10 / game.players?.length || 1}</p>
-                <p class="redirect-msg">Back to home...</p>
+                <p>Victories: {game.winsCount}</p>
+                <p>Points earned: {Math.floor(game.winsCount * 10 / (game.players?.length || 1))}</p>
+                <p class="redirect-msg">Returning to home in {gameOverCountdown}...</p>
             </div>
-    </div>
+        </div>
     {/if}
 {:else}
     <p>Loading game...</p>
 {/if}
-
-
-<style>
-
-  .gameover-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.85);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 200;
-  }
-
-  .gameover-content {
-   text-align: center;
-   color: white;
-  }
-
-  .gameover-content h1 {
-   font-size: 3rem;
-   color: #e74c3c;
-   margin-bottom: 1rem;
-  }
-
-  .redirect-msg {
-   color: #999;
-   font-size: 0.9rem;
-   margin-top: 1rem;
-  }
-
- .game-container {
-   width: 100vw;
-   height: 100vh;
-   display: flex;
-   flex-direction: column;
-   background-size: cover;
-   background-position: center;
-   overflow: hidden;
- }
-
-  .battlefield {
-    flex: 1;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 2rem;
-  }
-
-  .score-display {
-  display: flex;
-  gap: 1rem;
-  font-size: 0.8rem;
-  color: gold;
-  padding: 4px 1rem;
-  background: rgba(0,0,0,0.5);
-  }
-
-  .players-side, .enemies-side {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    align-items: center;
-  }
-
-  .sprite-container {
-    position: relative;
-    transition: transform 0.2s;
-    cursor: pointer;
-  }
-
-  .sprite-container.active {
-    transform: scale(1.1);
-    filter: drop-shadow(0 0 8px gold);
-  }
-
-  .sprite-container.selected {
-    outline: 3px solid #2ecc71;
-    border-radius: 4px;
-  }
-
-  .sprite-container.dead {
-    opacity: 0.4;
-    filter: grayscale(1);
-  }
-
-  .sprite-container.enemy {
-    cursor: pointer;
-  }
-
-  .sprite-container.enemy.selected {
-    outline: 3px solid red;
-    border-radius: 4px;
-  }
-
-  .sprite {
-    width: 96px;
-    height: 96px;
-    image-rendering: pixelated;
-  }
-
-  .hint {
-  color: #f39c12;
-  font-size: 0.8rem;
-  margin: 0;
-  }
-
-  .player-hp-bar {
-    width: 100%;
-    height: 6px;
-    background: #f7f6f6;
-    border-radius: 3px;
-    margin-top: 4px;
-  }
-
-  .player-hp-fill {
-    height: 100%;
-    background: #30e542;
-    border-radius: 3px;
-    transition: width 0.3s;
-  }
-
-  .player-energy-fill {
-    height: 100%;
-    background: #0ddbdb;
-    border-radius: 3px;
-    transition: width 0.3s;
-  }
-
-  .player-energy-bar {
-    width: 100%;
-    height: 6px;
-    background: #949595;
-    border-radius: 3px;
-    margin-top: 4px;
-  }
-
-  .enemy-statuses {
-  display: flex;
-  gap: 2px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.enemy-status {
-  font-size: 0.6rem;
-  background: rgba(231, 76, 60, 0.6);
-  padding: 1px 4px;
-  border-radius: 3px;
-  color: white;
-}
-
-
-  .enemy-hp-bar {
-    width: 100%;
-    height: 6px;
-    background: #333;
-    border-radius: 3px;
-    margin-top: 4px;
-  }
-
-  .enemy-hp-fill {
-    height: 100%;
-    background: #e74c3c;
-    border-radius: 3px;
-    transition: width 0.3s;
-  }
-
-  .enemy-energy-bar {
-    width: 100%;
-    height: 6px;
-    background: #333;
-    border-radius: 3px;
-    margin-top: 4px;
-  }
-
-  .enemy-energy-fill {
-    height: 100%;
-    background: #eb0feb;
-    border-radius: 3px;
-    transition: width 0.3s;
-  }
-
-  
-
-  .enemy-name {
-    display: block;
-    text-align: center;
-    font-size: 0.75rem;
-    color: white;
-    text-shadow: 1px 1px 2px black;
-  }
-
-  /* HUD */
-  .hud {
-    display: flex;
-    gap: 1rem;
-    background: rgba(0, 0, 0, 0.85);
-    border-top: 2px solid #4B365F;
-    padding: 1rem;
-    height: 280px;
-    overflow: hidden;
-  }
-
-  .player-card {
-    background: rgba(75, 54, 95, 0.4);
-    border: 1px solid #4B365F;
-    border-radius: 6px;
-    padding: 0.5rem;
-  }
-
-  .player-card.my-turn {
-    border-color: gold;
-    box-shadow: 0 0 6px gold;
-  }
-
-  .player-name {
-    margin-top: 8px;
-    font-size: 0.8rem;
-    color: #e0e0e0;
-    font-weight: bold;
-    display: block;
-    margin-bottom: 4px;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-  }
-
-  .bar-row {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    margin-bottom: 2px;
-  }
-
-  .bar-label {
-    font-size: 0.65rem;
-    color: #999;
-    width: 20px;
-  }
-
-  .bar {
-    flex: 1;
-    height: 8px;
-    background: #333;
-    border-radius: 4px;
-    overflow: hidden;
-  }
-
-  .bar-fill {
-    height: 100%;
-    border-radius: 4px;
-    transition: width 0.3s;
-  }
-
-  .bar-fill.hp { background: #2ecc71; }
-  .bar-fill.energy { background: #3498db; }
-
-  .bar-value {
-    font-size: 0.6rem;
-    color: #ccc;
-    width: 40px;
-    text-align: right;
-  }
-
-  /* CENTER */
-  .center-hud {
-    flex: 1;
-    overflow-y: auto;
-    color: #e0e0e0;
-  }
-
-  .moves-panel, .drop-panel, .levelup-panel,
-  .waiting-panel, .gameover-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .move-btn {
-    background: rgba(75, 54, 95, 0.6);
-    border: 1px solid #4B365F;
-    color: #e0e0e0;
-    padding: 0.4rem 0.8rem;
-    border-radius: 4px;
-    cursor: pointer;
-    text-align: left;
-  }
-
-  .move-btn.selected {
-    border-color: gold;
-    background: rgba(255, 215, 0, 0.2);
-  }
-
-  .move-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .action-buttons {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-  }
-
-  .scroll-icon {
-    width: 24px;
-    height: 24px;
-    vertical-align: middle;
-    image-rendering: pixelated;
-  }
-
-  /* STATS */
-  .stats-panel {
-    min-width: 150px;
-    color: #ccc;
-    font-size: 0.8rem;
-  }
-
-  .status-badge {
-    display: inline-block;
-    background: #4B365F;
-    border-radius: 4px;
-    padding: 2px 6px;
-    font-size: 0.7rem;
-    margin: 2px;
-    color: #e0e0e0;
-  }
-
-  /* COMBAT LOG */
-  .combat-log {
-    min-width: 180px;
-    max-height: 260px;
-    overflow-y: auto;
-    font-size: 0.75rem;
-    color: #ccc;
-    border-left: 1px solid #4B365F;
-    padding-left: 0.5rem;
-  }
-
-  .combat-log p {
-    margin: 2px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    padding-bottom: 2px;
-  }
-
-  /* MODAL */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-  }
-
-  .modal {
-    background: #1a1a2e;
-    border: 2px solid #4B365F;
-    border-radius: 8px;
-    padding: 2rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    min-width: 300px;
-  }
-
-  h3 { color: #e0e0e0; margin: 0 0 0.5rem; }
-  h4 { color: #ccc; margin: 0.5rem 0 0.25rem; }
-
-  button {
-    background: rgba(75, 54, 95, 0.6);
-    border: 1px solid #4B365F;
-    color: #e0e0e0;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-
-  button.sprite-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-  }
-
-  button.sprite-container.enemy {
-    cursor: pointer;
-  }
-
-  button:hover { background: rgba(75, 54, 95, 0.9); }
-  button:disabled { opacity: 0.4; cursor: not-allowed; }
-  button.selected { border-color: gold; }
-
-
-  .turn-order {
-  display: flex;
-  gap: 4px;
-  padding: 4px 1rem;
-  background: rgba(0,0,0,0.6);
-  overflow-x: auto;
-}
-
-.turn-token {
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  color: #ccc;
-  background: rgba(255,255,255,0.1);
-  white-space: nowrap;
-}
-
-.turn-token.current {
-  background: gold;
-  color: black;
-  font-weight: bold;
-}
-
-.turn-token.is-enemy {
-  color: #e74c3c;
-  border: 1px solid #e74c3c;
-}
-</style>

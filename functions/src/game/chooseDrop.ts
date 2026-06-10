@@ -2,7 +2,7 @@ import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {getFirestore} from "firebase-admin/firestore";
 import type {EnemyData, GameEnemy, GamePlayer, StatusInstance} from "../types";
 import {generateEnemyIds} from "../engine/enemies";
-import {scaleEnemy, computeTurnOrder} from "../engine/combat";
+import {scaleEnemy, computeTurnOrder, delay} from "../engine/combat";
 import {processEnemyTurns} from "./performAction";
 
 const db = getFirestore();
@@ -34,6 +34,20 @@ export const chooseDrop = onCall(
       throw new HttpsError("failed-precondition", "Not drop phase");
     }
 
+    let dropChooserIndex = game.dropChooserIndex;
+
+    // skip dead players
+    while (
+      dropChooserIndex < game.players.length &&
+      game.players[dropChooserIndex].stats.hp <= 0
+    ) {
+      dropChooserIndex++;
+    }
+
+    if (dropChooserIndex !== game.dropChooserIndex) {
+      await gameRef.update({dropChooserIndex});
+    }
+
     // Verify that it is this player's turn to choose
     const currentChooser = game.players[game.dropChooserIndex];
     if (currentChooser.uid !== uid) {
@@ -48,7 +62,7 @@ export const chooseDrop = onCall(
     const existingMove = player.moves.find((m) => m.scrollId === scrollId);
 
     if (existingMove) {
-      // Livella la mossa in modo sicuro
+      // Level up the existing move
       players[playerIndex] = {
         ...player,
         moves: player.moves.map((m) => {
@@ -132,6 +146,7 @@ export const chooseDrop = onCall(
         players = result.players;
         enemies = result.enemies;
         currentActorIndex = result.nextIndex;
+        await delay(1500);
 
         // If all enemies have acted and the index finger goes over the tail,
         // reset at the beginning

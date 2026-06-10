@@ -38,7 +38,7 @@ async function executeEnemyAction(
     return {players, enemies};
   }
 
-  await delay(1000); // delays action
+  await delay(500); // delays action
 
   const scrollSnap = await db.collection("scrolls").doc(moveId).get();
   const scroll = scrollSnap.data() as ScrollData;
@@ -284,7 +284,7 @@ export const performAction = onCall(
       if (scroll.type === "heal") {
         if (scroll.target === "single") {
           const targetPlayer = players.find(
-            (player) => player.uid === action.targetId
+            (player) => player.uid === action.targetId && player.stats.hp > 0
           );
           if (!targetPlayer) {
             throw new HttpsError("invalid-argument", "Invalid target");
@@ -300,7 +300,8 @@ export const performAction = onCall(
           );
         } else {
         // MULTI TARGET
-          players = players.map((p) => {
+          const alivePlayers = players.filter((p) => p.stats.hp > 0);
+          players = alivePlayers.map((p) => {
             return {...p,
               stats: {
                 ...p.stats,
@@ -339,7 +340,9 @@ export const performAction = onCall(
         };
 
         if (scroll.target == "single") {
-          const targetPlayer = players.find((p) => p.uid === action.targetId);
+          const targetPlayer = players.find(
+            (p) => p.uid === action.targetId && p.stats.hp > 0
+          );
 
           if (!targetPlayer) {
             throw new HttpsError("invalid-argument", "Invalid target");
@@ -513,6 +516,7 @@ export const performAction = onCall(
       players = result.players;
       enemies = result.enemies;
       nextIndex = result.nextIndex;
+      await delay(1500);
 
       enemies = enemies.filter((e) => e.hp > 0);
       alivePlayers = players.filter((p) => p.stats.hp > 0);
@@ -589,6 +593,7 @@ export const performAction = onCall(
       players = result.players;
       enemies = result.enemies;
       nextIndex = result.nextIndex;
+      await delay(1500);
 
       if (nextIndex >= newTurnOrder.length) {
         const firstPlayerIdx = newTurnOrder.findIndex(

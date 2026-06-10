@@ -22,6 +22,7 @@ onSnapshot (Firestore):
     import { authStore } from '$lib/stores/auth.svelte';
     import type { AppUser } from '$lib/types';
     import { subscribeToPush } from '$lib/firebase/notification';
+    import '$lib/styles/global.css'
 
     let { children } = $props();
 
@@ -82,3 +83,5 @@ onSnapshot (Firestore):
 </script>
 
 {@render children()}
+
+

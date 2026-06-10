@@ -163,7 +163,7 @@ export const startGame = onCall(
       status: "in_game",
     });
 
-    await delay(3000);
+    await delay(2000);
 
     // the first actor can be an enemy
     const enemyTurnResult = await processEnemyTurns(turnOrder, 0, players, enemies);

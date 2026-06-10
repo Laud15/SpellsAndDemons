@@ -1,6 +1,6 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {getFirestore} from "firebase-admin/firestore";
-import {computeStats} from "../engine/combat";
+import {computeStats, delay} from "../engine/combat";
 import type {GameEnemy, GamePlayer} from "../types";
 import {processEnemyTurns} from "./performAction";
 
@@ -89,6 +89,7 @@ export const levelUp = onCall(
       players = result.players;
       enemies = result.enemies;
       currentActorIndex = result.nextIndex;
+      await delay(1500);
 
       const allPlayersDead = players.every((p) => p.stats.hp <= 0);
 
@@ -122,14 +123,21 @@ export const levelUp = onCall(
       enemies = enemies.filter((e: GameEnemy) => e.hp > 0);
     }
 
-    await gameRef.update({
-      players,
-      enemies,
-      currentActorIndex,
-      pendingLevelUps,
-      phase,
-    });
-
+    if (phase === "level_up") {
+      await gameRef.update({
+        players,
+        pendingLevelUps,
+        phase,
+      });
+    } else {
+      await gameRef.update({
+        players,
+        enemies,
+        currentActorIndex,
+        pendingLevelUps,
+        phase,
+      });
+    }
     return {success: true};
   }
 );
