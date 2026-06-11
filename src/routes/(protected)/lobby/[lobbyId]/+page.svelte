@@ -18,6 +18,8 @@
     import { auth, db } from '$lib/firebase/clientSDK';
     import type { Friend } from '$lib/types';
 
+    import '$lib/styles/lobby.css';
+
     let lobbyId = $derived($page.params.lobbyId as string);
     let lobby = $derived(lobbyStore.currentLobby);
     let isHost = $derived(lobby?.hostId === authStore.appUser?.uid);
@@ -128,50 +130,68 @@
 
 </script>
 
-<h1>Lobby</h1>
+<div class="lobby-container">
+  <h1>Lobby Room</h1>
 
-{#if lobby}
-  <section>
-    <h2>Players ({lobby.players.length}/4)</h2>
-    {#each lobby.players as player}
-      <div>
-        <span>{player.username}</span>
-        {#if player.uid === lobby.hostId}
-          <span>host</span>
-        {/if}
-      </div>
-    {/each}
-  </section>
+  {#if lobby}
+    <div class="lobby-grid">
+      <section class="panel players-panel">
+        <h2>Players ({lobby.players.length}/4)</h2>
+        <div class="players-list">
+          {#each lobby.players as player}
+            <div class="player-slot" class:is-host={player.uid === lobby.hostId}>
+              <span class="player-name">{player.username}</span>
+              {#if player.uid === lobby.hostId}
+                <span class="host-badge">HOST</span>
+              {/if}
+            </div>
+          {/each}
+          {#each Array(4 - lobby.players.length) as _}
+            <div class="player-slot empty">
+              <span>Waiting for player...</span>
+            </div>
+          {/each}
+        </div>
+      </section>
 
-{#if authStore.appUser?.uid == lobby.hostId} <!-- only the host can invite other player -->
-    {#if availableFriendsToInvite.length > 0}
-        <section>
-        <h2>Invite friends</h2>
-            {#each availableFriendsToInvite as friend }
-                <div>
-                    <span>{friend.username}</span>
-                    <button onclick={() => handleInvite(friend.uid)} disabled={inviteLoading}>
-                        {inviteLoading ? 'Inviting...' : 'Invite'}
-                    </button>
+      <section class="panel actions-panel">
+        {#if authStore.appUser?.uid == lobby.hostId}
+          <h2>Invite Friends</h2>
+          {#if availableFriendsToInvite.length > 0}
+            <div class="invite-list">
+              {#each availableFriendsToInvite as friend }
+                <div class="invite-row">
+                  <span>{friend.username}</span>
+                  <button class="btn-invite" onclick={() => handleInvite(friend.uid)} disabled={inviteLoading}>
+                    {inviteLoading ? 'Inviting...' : 'Invite'}
+                  </button>
                 </div>
-            {/each}
-        </section>
-    {/if}
-{/if}
+              {/each}
+            </div>
+          {:else}
+            <p class="no-friends">No friends available to invite.</p>
+          {/if}
+        {/if}
 
-{#if error}
-    <p class="error">{error}</p>
-{/if}
+        <div class="lobby-controls">
+          {#if isHost}
+            <button class="btn-start" onclick={handleStart} disabled={startLoading}>
+              {startLoading ? 'Starting...' : '⚔️ Start Game'}
+            </button>
+          {/if}
+          <button class="btn-leave" onclick={handleLeave} disabled={leaveLoading}>
+            {leaveLoading ? 'Leaving...' : 'Quit Lobby'}
+          </button>
+        </div>
 
-<button onclick={handleLeave} disabled={leaveLoading}>
-    {leaveLoading ? 'Leaving...' : 'Quit'}
-</button>
-
-{#if isHost}
-    <button onclick={handleStart} disabled={startLoading}>
-        {startLoading ? 'Starting...' : 'Start'}
-    </button>
-{/if}
-{:else}
-  <p>Loading lobby...</p>
-{/if}
+        {#if error}
+          <p class="error">{error}</p>
+        {/if}
+      </section>
+    </div>
+  {:else}
+    <div class="loading-lobby">
+      <p>Loading magical lobby data...</p>
+    </div>
+  {/if}
+</div>

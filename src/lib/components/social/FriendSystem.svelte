@@ -9,6 +9,8 @@
   import { db } from '$lib/firebase/clientSDK';
   import type { FriendRequest } from '$lib/types';
   import { authStore } from '$lib/stores/auth.svelte';
+
+  import '$lib/styles/friendSystem.css';
   
 
   interface Friend {
@@ -146,65 +148,66 @@
   }
 </script>
 
-<!-- research user -->
-<section>
-  <h2>Add friend</h2>
-  <input
-    type="text"
-    placeholder="Username"
-    bind:value={searchUsername}
-  />
-  <button onclick={handleSearch} disabled={searchLoading}>
-    {searchLoading ? 'Searching...' : 'Search'}
-  </button>
+<div class="social-wrapper">
+  <section class="social-section">
+    <h3>Add Friend</h3>
+    <div class="search-box">
+      <input type="text" placeholder="Username..." bind:value={searchUsername} />
+      <button onclick={handleSearch} disabled={searchLoading}>
+        {searchLoading ? '...' : 'Search'}
+      </button>
+    </div>
 
-  {#if searchError}
-    <p class="error">{searchError}</p>
-  {/if}
+    {#if searchError}
+      <p class="error-text">{searchError}</p>
+    {/if}
 
-  {#if searchResult}
-    <p>Find: <strong>{searchResult.username}</strong></p>
-    <button onclick={handleSendRequest} disabled={sendingRequestLoading}>
-     {sendingRequestLoading ? 'Sending...' : 'Send'}
-    </button>
-  {/if}
-
-  {#if requestMessage}
-    <p>{requestMessage}</p>
-  {/if}
-</section>
-
-<!-- incoming request -->
-<section>
-  <h2>Incoming requests</h2>
-  {#if incomingRequests.length === 0}
-    <p>There are not incoming requests</p>
-  {:else}
-    {#each incomingRequests as request}
-      <div>
-        <span>{request.fromUsername}</span>
-        <button onclick={() => handleAccept(request)} disabled={requestHandleLoading}>
-          {requestHandleLoading ? 'Accepting...' : 'Accept'}
-        </button>
-        <button onclick={() => handleReject(request)} disabled={requestHandleLoading}>
-          {requestHandleLoading ? 'Refusing...' : 'Refuse'}
+    {#if searchResult}
+      <div class="search-result">
+        <span>Found: <strong>{searchResult.username}</strong></span>
+        <button class="btn-action" onclick={handleSendRequest} disabled={sendingRequestLoading}>
+          {sendingRequestLoading ? 'Sending...' : 'Add'}
         </button>
       </div>
-    {/each}
-  {/if}
-</section>
+    {/if}
 
-<!-- view the friends -->
+    {#if requestMessage}
+      <p class="info-text">{requestMessage}</p>
+    {/if}
+  </section>
 
-<section>
-  <h2>Friends list</h2>
-  {#if friends.length === 0}
-    <p>No friends yet</p>
-  {:else}
-    {#each friends as friend}
-      <div>
-        <span>{friend.username}</span>
+  <section class="social-section">
+    <h3>Incoming Requests ({incomingRequests.length})</h3>
+    {#if incomingRequests.length === 0}
+      <p class="empty-text">No pending requests</p>
+    {:else}
+      <div class="list-container">
+        {#each incomingRequests as request}
+          <div class="request-row">
+            <span class="name">{request.fromUsername}</span>
+            <div class="row-actions">
+              <button class="btn-accept" onclick={() => handleAccept(request)} disabled={requestHandleLoading}>✓</button>
+              <button class="btn-reject" onclick={() => handleReject(request)} disabled={requestHandleLoading}>✕</button>
+            </div>
+          </div>
+        {/each}
       </div>
-    {/each}
-  {/if}
-</section>
+    {/if}
+  </section>
+
+  <section class="social-section">
+    <h3>Friends List ({friends.length})</h3>
+    {#if friends.length === 0}
+      <p class="empty-text">No friends yet</p>
+    {:else}
+      <div class="list-container">
+        {#each friends as friend}
+          <div class="friend-row">
+            <span class="status-dot"></span>
+            <span>{friend.username}</span>
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </section>
+</div>

@@ -3,7 +3,7 @@ import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {getFirestore} from "firebase-admin/firestore";
 import type {GamePlayer, GameEnemy, EnemyData, StatusInstance} from "../types";
 import {generateEnemyIds} from "../engine/enemies";
-import {scaleEnemy, computeTurnOrder} from "../engine/combat";
+import {scaleEnemy, computeTurnOrder, delay} from "../engine/combat";
 import {processEnemyTurns} from "./performAction";
 const db = getFirestore();
 
@@ -73,6 +73,7 @@ export const skipDrop = onCall(
       let currentActorIndex = 0;
 
       if (phase === "player_turn") {
+        await delay(500); // Allow UI to update before enemy turns
         let result = await processEnemyTurns(turnOrder, 0, players, enemies);
         players = result.players;
         enemies = result.enemies;
@@ -138,6 +139,7 @@ export const skipDrop = onCall(
         dropChooserIndex: 0,
         pendingLevelUps: alivePendingLevelUps,
       });
+      delay(1000);
     } else {
       await gameRef.update({
         dropChooserIndex: nextChooserIndex,

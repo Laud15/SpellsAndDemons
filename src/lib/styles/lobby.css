@@ -1,0 +1,148 @@
+.lobby-container {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 20px;
+  }
+
+  h1 {
+    color: var(--color-gold);
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 2.2rem;
+  }
+
+  .lobby-grid {
+    display: flex;
+    gap: 30px;
+  }
+
+  .panel {
+    flex: 1;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+
+  h2 {
+    font-size: 1.3rem;
+    color: var(--color-gold);
+    border-bottom: 1px solid rgba(75, 54, 95, 0.4);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+  }
+
+  .players-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .player-slot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(75, 54, 95, 0.6);
+    border-radius: var(--radius);
+  }
+
+  .player-slot.is-host {
+    border-color: var(--color-gold);
+    background: rgba(240, 180, 41, 0.05);
+  }
+
+  .player-slot.empty {
+    border-style: dashed;
+    border-color: rgba(75, 54, 95, 0.4);
+    color: var(--color-muted);
+    font-style: italic;
+  }
+
+  .host-badge {
+    background: var(--color-gold);
+    color: #000;
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    font-weight: bold;
+    border-radius: 4px;
+    font-family: var(--font-title);
+  }
+
+  .invite-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 180px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+  }
+
+  .invite-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.02);
+    border-radius: var(--radius);
+    gap: 15px;
+  }
+
+  .invite-row span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .btn-invite {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+
+    width: auto;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .lobby-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 30px;
+  }
+
+  .btn-start {
+    padding: 12px;
+    font-size: 1.1rem;
+    background: rgba(34, 197, 94, 0.2);
+    border-color: var(--color-hp);
+    color: #fff;
+  }
+  .btn-start:hover:not(:disabled) {
+    background: rgba(34, 197, 94, 0.4);
+  }
+
+  .btn-leave {
+    padding: 10px;
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--color-danger);
+    color: var(--color-danger);
+  }
+  .btn-leave:hover {
+    background: rgba(239, 68, 68, 0.2);
+  }
+
+  .no-friends { color: var(--color-muted); font-size: 0.95rem; }
+  .error { color: var(--color-danger); margin-top: 10px; }
+  .loading-lobby { text-align: center; color: var(--color-muted); padding: 40px; }
+
+
+  @media (max-width: 768px) {
+    .lobby-grid {
+      flex-direction: column;
+    }
+    .lobby-container {
+      margin: 10px auto;
+      padding: 10px;
+    }
+  }

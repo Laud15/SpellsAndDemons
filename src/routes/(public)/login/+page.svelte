@@ -3,6 +3,8 @@
   import { login } from '$lib/firebase/auth';
   import { goto } from '$app/navigation';
 
+  import '$lib/styles/login.css'
+
   let email = $state('');
   let password = $state('');
   let error = $state('');
@@ -31,17 +33,25 @@
   }
 </script>
 
-<h1>Login</h1>
+<div class="page-wrapper">
+  <div class="auth-container">
+    
+    <h1 class="game-title">SPELLS AND DEMONS</h1>
+    <h2 class="page-subtitle">Login</h2>
 
-<input type="email" placeholder="Email" bind:value={email} />
-<input /*type="password"*/ placeholder="Password" bind:value={password} />
+    <div class="form-group">
+      <input type="email" placeholder="Email" bind:value={email} />
+      <input type="password" placeholder="Password" bind:value={password} />
+    </div>
 
-{#if error}
-  <p class="error">{error}</p>
-{/if}
+    {#if error}
+      <p class="error">{error}</p>
+    {/if}
 
-<button onclick={handleLogin} disabled={loading}>
-  {loading ? 'Login...' : 'Login'}
-</button>
+    <button onclick={handleLogin} disabled={loading}>
+      {loading ? 'Login...' : 'Login'}
+    </button>
 
-<a href="/register">Don't have an account? Register!</a>
+    <a href="/register">Don't have an account? Register!</a>
+  </div>
+</div>

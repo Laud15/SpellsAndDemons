@@ -22,11 +22,10 @@
     }
 
     let spriteUrl = $derived(`/sprites/${spriteName}.png`);
-    let cssClass = $derived(`sprite anim-${currentAnim}`);
 </script>
 
 <div
-  class="sprite anim-{currentAnim}"
+  class="sprite anim-{currentAnim}" //change when currentAnim change (look at sprite.css)
   style="
     background-image: url({spriteUrl});
     transform: scaleX({flipped ? -1 : 1});

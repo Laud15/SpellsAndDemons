@@ -5,6 +5,8 @@
 	import { onSnapshot, orderBy, query, collection } from "firebase/firestore";
     import { db } from "$lib/firebase/clientSDK";
 
+    import '$lib/styles/ranking.css'
+
     let rankingList = $state<AppUser[]>([]);
     
 
@@ -27,18 +29,26 @@
 
 </script>
 
-<h1>Global Ranking</h1>
-{#if rankingList.length > 0}
-    {#each rankingList as player, i}
-        <div>
-            <span><strong>#{i+1}</strong> {player.username} : {player.score} score </span>
-        </div>
-    {/each}
-{/if}
+<div class="ranking-container">
+  <h1>Global Ranking</h1>
+  
+  {#if rankingList.length > 0}
+    <div class="leaderboard">
+        {#each rankingList as player, i}
+            <div class="player-row" 
+                 class:podium-1={i === 0} 
+                 class:podium-2={i === 1} 
+                 class:podium-3={i === 2}>
+                <span class="rank">#{i+1}</span>
+                <span class="username">{player.username}</span>
+                <span class="score">{player.score} <small>pts</small></span>
+            </div>
+        {/each}
+    </div>
+  {:else}
+    <p class="loading">Loading scores...</p>
+  {/if}
 
-<a href="/home">Go back </a>
-
-
-
-
+  <a href="/home" class="back-btn">← Go back</a>
+</div>
 

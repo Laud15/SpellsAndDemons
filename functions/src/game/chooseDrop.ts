@@ -142,6 +142,7 @@ export const chooseDrop = onCall(
       let currentActorIndex = 0;
 
       if (phase === "player_turn") {
+        await delay(500); // Allow UI to update before enemy turns
         let result = await processEnemyTurns(turnOrder, 0, players, enemies);
         players = result.players;
         enemies = result.enemies;

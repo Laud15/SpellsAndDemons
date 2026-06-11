@@ -1,0 +1,105 @@
+.page-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 95vh; 
+    width: 100%;
+    padding: 20px;
+  }
+
+.auth-container {
+    display: flex;
+    flex-direction: column;
+    max-width: 400px;
+    margin: 60px auto;
+    padding: 30px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 30px rgba(54, 95, 55, 0.2);
+    text-align: center;
+  }
+
+  .game-title {
+    font-family: var(--font-title);
+    font-size: 2.5rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    margin-bottom: 6px;
+    
+    background: linear-gradient(135deg, #fff3cc 0%, var(--color-gold) 50%, #b38600 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    
+    filter: drop-shadow(0 0 8px rgba(240, 180, 41, 0.4)) 
+            drop-shadow(0 0 20px rgba(124, 58, 237, 0.3));
+    
+    position: relative;
+  }
+
+  .page-subtitle {
+    font-family: var(--font-body);
+    color: var(--color-muted);
+    font-size: 1.2rem;
+    margin-bottom: 24px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  input {
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 1.1rem;
+    transition: border-color var(--transition);
+  }
+
+  input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+  }
+
+  button {
+    padding: 12px;
+    font-size: 1.1rem;
+    margin-bottom: 16px;
+    width: 100%;
+  }
+
+  .error {
+    color: var(--color-danger);
+    margin-bottom: 16px;
+    font-size: 1rem;
+  }
+
+  a {
+    color: var(--color-muted);
+    text-decoration: none;
+    font-size: 0.95rem;
+    transition: color var(--transition);
+  }
+
+  a:hover {
+    color: var(--color-gold);
+  }
+
+  @media (max-width: 480px) {
+    .page-wrapper {
+      padding: 10px;
+    }
+    .auth-container {
+      padding: 30px 20px;
+    }
+    .game-title {
+      font-size: 1.9rem;
+      letter-spacing: 0.08em;
+    }
+  }

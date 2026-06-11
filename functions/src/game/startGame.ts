@@ -166,6 +166,7 @@ export const startGame = onCall(
     await delay(2000);
 
     // the first actor can be an enemy
+    await delay(500); // Ensure client is ready before enemy turns
     const enemyTurnResult = await processEnemyTurns(turnOrder, 0, players, enemies);
 
     players = enemyTurnResult.players;

@@ -1,9 +1,12 @@
 <script lang="ts">
     import { register } from '$lib/firebase/auth';
     import { goto } from '$app/navigation';
+
+    import '$lib/styles/register.css'
 	
     let email = $state('');
     let password = $state('');
+    let confirmPassword = $state('');
     let username = $state('');
     let error = $state('');
     let loading = $state(false);
@@ -14,6 +17,11 @@
 
         if(!regex.test(username)){
             error = 'invalid characters in the username'
+            return;
+        }
+
+        if(!(password === confirmPassword)){
+            error = "the two passwords don't match"
             return;
         }
 
@@ -42,18 +50,23 @@
 
 </script>
 
-<h1>Register</h1>
+<div class="auth-container">
+  <h1>Register</h1>
 
-<input type="text" placeholder="Username" bind:value={username}/>
-<input type="email" placeholder="Email" bind:value={email}/>
-<input /*type="password"*/ placeholder="Password" bind:value={password}/>
+  <div class="form-group">
+    <input type="text" placeholder="Username" bind:value={username}/>
+    <input type="email" placeholder="Email" bind:value={email}/>
+    <input type="password" placeholder="Password" bind:value={password}/>
+    <input type="password" placeholder="Confirm Password" bind:value={confirmPassword}/>
+  </div>
 
-{#if error}
-  <p style="color:red;" class="error">{error}</p>
-{/if}
+  {#if error}
+    <p class="error">{error}</p>
+  {/if}
 
-<button onclick={handleRegister} disabled={loading}>
-  {loading ? 'Loading...' : 'Register'}
-</button>
+  <button onclick={handleRegister} disabled={loading}>
+    {loading ? 'Loading...' : 'Register'}
+  </button>
 
-<a href="/login">Do you have an account? Login!</a>
+  <a href="/login">Do you have an account? Login!</a>
+</div>

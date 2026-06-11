@@ -21,29 +21,43 @@
     import '$lib/styles/game.css';
     import '$lib/styles/sprite.css';
 
+    //scroll's data from the db
     let scrollsData = $state<Record<string, ScrollData>>({});
 
+    //id of the game, is taken from the url
     let gameId = $derived($page.params.gameId as string);
+    //the stato of the game, read from the db
     let game = $derived(gameStore.currentGame);
+
+    //uid of the logged user
     let myUid = $derived(authStore.appUser?.uid ?? '');
 
-    //local state of the UI
-    let selectedScrollId = $state<string | null>(null);
-    let selectedTargetId = $state<string | null>(null);
-    let replaceScrollId = $state<string | null>(null);
+    //LOCAL STATE OF THE UI
+    let selectedScrollId = $state<string | null>(null);//id of the user's selected move
+    let selectedTargetId = $state<string | null>(null);//id of the selected target for the move (only for single target moves)
+    let replaceScrollId = $state<string | null>(null);//what move to replace if you don't know the new one
     let loading = $state(false);
-    let showReplaceModal = $state(false);
-    let pendingDropScrollId = $state<string | null>(null);
-    let deadEnemies = $state<GameEnemy[]>([]);
+    let showReplaceModal = $state(false);//show/hide the modal for which move replace
+    let pendingDropScrollId = $state<string | null>(null);//when the user has chosen the new move but not yet the one to be replaced
+    let deadEnemies = $state<GameEnemy[]>([]); //dead enemies that are still in death animation
 
     //utils derived
-    let myPlayer = $derived(game?.players.find(p => p.uid === myUid) ?? null);
+    let myPlayer = $derived(game?.players.find(p => p.uid === myUid) ?? null); //the player corresponding to the logged-in user 
+
+    //isMyTurn is true only if: the phase is player_turn and the current actor in the turnOrder is the logged-in user
     let isMyTurn = $derived(game?.phase === 'player_turn' && game?.turnOrder[game?.currentActorIndex] === myUid);
+
+    //isDropChooser is true only if: the phase is drop_phase and the dropChooserIndex point to logged user
     let isDropChooser = $derived(game?.phase === 'drop_phase' && game?.players[game?.dropChooserIndex]?.uid === myUid);
+
+    //isLevelUp is true only if: the pase is level_up and uid of the user is in pendingLevelUps
     let isLevelUp = $derived(game?.phase === 'level_up' && game?.pendingLevelUps.includes(myUid));
 
     //animation
     const ANIM_DELAY = 600;  //ms between one animation and another one
+
+    //records that map uid/instanceId -> correct animation
+    //each actor has his own indipendent animation
     let playerAnims = $state<Record<string, 'idle' | 'attack' | 'hit' | 'death'>>({});
     let enemyAnims = $state<Record<string, 'idle' | 'attack' | 'hit' | 'death'>>({});
 
@@ -70,6 +84,7 @@
         selectedScrollId ? scrollsData[selectedScrollId]?.target === 'multi' : false
     );
 
+    //load the scrolls from db in scrollsData
     onMount(async () => {
         const snap = await getDocs(collection(db, 'scrolls'));
         const data: Record<string, ScrollData> = {};
@@ -77,17 +92,20 @@
         scrollsData = data;
     });
 
-
+    //MAIN EFFECT
     $effect(() =>{
         const gId = gameId;
         if (!gId) { return; }
 
         const unsubscribe = subscribeGame(gId, async (updatedGame) => {
-                const snapshot = prevGame;
+                const snapshot = prevGame;//save prev before any update
+
                 //generate combat log's message
                 if (snapshot && updatedGame) {
+                    //if there is a previous state to compare -> generate log and animation
                     enqueueAnim(() => generateLogs(snapshot, updatedGame));
                 } else {
+                    //first update (prev doesn't exists), initialize all animation in idle 
                     updatedGame.players.forEach(p => {
                         playerAnims[p.uid] = 'idle';
                     });
@@ -98,9 +116,10 @@
                     enemyAnims = {...enemyAnims};
                 }
 
-                prevGame = updatedGame;
-                gameStore.setGame(updatedGame);
+                prevGame = updatedGame; //update prev with the last update
+                gameStore.setGame(updatedGame);//update the store -> update the UI
 
+                // if is game over -> start the countdown to return to home page
                 if (updatedGame.phase === 'game_over'  && !gameOverInterval) {
                     await tick();
                     gameOverCountdown = 5;
@@ -115,6 +134,7 @@
                 }
             });
 
+            //cleanup when left the page
             return () => {
                 unsubscribe();
                 gameStore.setGame(null);
@@ -128,11 +148,17 @@
     });
 
     //update animation when game state change
+    //It is replayed every time the game changes. 
+    //The condition in instead of !enemyAnims[id] is important — it checks if the key exists in the object, 
+    //not if the value is truthy. 
+    //This avoids overwriting an ongoing 'hit' or 'attack' animation with 'idle'
     $effect(() => {
         if (!game) {return;}
         //intialize with idle animation for all the actors
         game.players.forEach(p => {
+            //Initialize only if it doesn't exist yet — don't overwrite animations in progress
             if (!playerAnims[p.uid]) { playerAnims[p.uid] = 'idle'; }
+            //if the player is dead force the death's animation
             if (p.stats.hp <= 0 && playerAnims[p.uid] !== 'death') {
                 playerAnims[p.uid] = 'death';
             }
@@ -141,36 +167,65 @@
         game.enemies.forEach(e => {
             //only if it does not yet exist
             if (!(e.instanceId in enemyAnims)) {
+                //Initialize only if it doesn't exist yet
+                // do not touch existing enemyAnims so as not to interrupt animations in progress
                 enemyAnims[e.instanceId] = 'idle';
             }
         });
     });
 
-    //when a player attack call this function
-    function triggerAttackAnim(actorId: string, isEnemy: boolean) {
-        if (isEnemy) {
-            enemyAnims[actorId] = 'attack';
-            enemyAnims = {...enemyAnims};
-        } else {
-            playerAnims[actorId] = 'attack';
-            playerAnims = {...playerAnims};
-        }
-    }
-
     // chiama questo quando qualcuno viene colpito
     function triggerHitAnim(targetId: string, isEnemy: boolean) {
         if (isEnemy) {
-            enemyAnims[targetId] = 'hit';
-            enemyAnims = {...enemyAnims};
+            //if already hit, go idle and only after hit
+            if (enemyAnims[targetId] === 'hit') {
+                enemyAnims[targetId] = 'idle';
+                enemyAnims = {...enemyAnims};
+                setTimeout(() => {
+                    enemyAnims[targetId] = 'hit';
+                    enemyAnims = {...enemyAnims};
+                }, 32); 
+            } else {
+                enemyAnims[targetId] = 'hit';
+                enemyAnims = {...enemyAnims};
+            }
         } else {
-            playerAnims[targetId] = 'hit';
-            playerAnims = {...playerAnims};
-        }
+            if (playerAnims[targetId] === 'hit') {
+                playerAnims[targetId] = 'idle';
+                playerAnims = {...playerAnims};
+                setTimeout(() => {
+                    playerAnims[targetId] = 'hit';
+                    playerAnims = {...playerAnims};
+                }, 32);
+            } else {
+                playerAnims[targetId] = 'hit';
+                playerAnims = {...playerAnims};
+            }
+        } 
     }
-
+   //generateLogs compares the status before (prev) and after (next) a Firestore update and decides which animations to show and which messages to add to the log.
    async function generateLogs(prev: Game, next: Game) {
+
+        // player's attack anim. (when the energy is reduce)
+        for (const nextPlayer of next.players) {
+            const prevPlayer = prev.players.find(p => p.uid === nextPlayer.uid);
+            if (!prevPlayer) { continue; }
+
+            // if the energy is reduce the player had cast the spell
+            if (nextPlayer.stats.energy < prevPlayer.stats.energy) {
+                playerAnims[nextPlayer.uid] = 'attack';
+                playerAnims = {...playerAnims};
+                await new Promise(r => setTimeout(r, ANIM_DELAY));
+                break; // one player at time
+            }
+        }
+
+
+
         
         //log for damage dealt to enemies
+        //confront hp prev's hp and next's hp of each enemy 
+        //if the hp are decreased -> the enemy has been hit by a player
         for(const nextEnemy of next.enemies) {
             const prevEnemy = prev.enemies.find(
                 e => e.instanceId === nextEnemy.instanceId
@@ -184,6 +239,7 @@
         }
 
         //log for dead enemies
+        //an enemy that is in prev but not in next is dead
         for(const prevEnemy of prev.enemies){
             const stillAlive = next.enemies.find(
                 e => e.instanceId === prevEnemy.instanceId
@@ -203,15 +259,18 @@
             }
         }
 
-        
+        //Player damage
         for (const nextPlayer of next.players) {
             const prevPlayer = prev.players.find(p => p.uid === nextPlayer.uid);
             if (!prevPlayer) continue;
             //player take damage
             if (nextPlayer.stats.hp < prevPlayer.stats.hp) {
+                //find the enemy that has attacked
+                //first try with prev.turnOrder[prev.currentActorIndex] (who was acting in precedent moment)
+                //fallback: first enemy that spent energy
+                //fallback: first enemy alive
                 const dmg = prevPlayer.stats.hp - nextPlayer.stats.hp;
 
-                //find the enemy that have spent energy
                 const attackingEnemy = (() =>{
                     //use prev's currentActorIndex (is the enemy that has just performed)
                     const prevActorId = prev.turnOrder[prev.currentActorIndex];
@@ -301,13 +360,13 @@
 
     async function handleAttack() {
 
-        if (!selectedScrollId || !game) { return; }
+        if (!selectedScrollId || !game) { return; } //id data is missing don't do anything
+
         const scroll = myPlayer?.moves.find(m => m.scrollId === selectedScrollId);
+
         if (!scroll) { return; }
         loading = true;
-        triggerAttackAnim(myUid, false);
-        await new Promise(r => setTimeout(r, ANIM_DELAY));
-
+        
         //Multi-target moves do not require target
         try {
             await performAction(gameId, {
@@ -595,25 +654,25 @@
                                 </span>
                         </button>
                         {/each}
-                            {#if selectedScrollId && !isMultiTarget && !selectedTargetId}
-                                <p class="hint">Select a target</p>
-                            {/if}
+                        {#if selectedScrollId && !isMultiTarget && !selectedTargetId}
+                            <p class="hint">Select a target</p>
+                        {/if}
 
-                            <div class="action-buttons">
-                                <button
-                                    onclick={handleAttack}
-                                    disabled={!isMyTurn || !selectedScrollId || loading || (!isMultiTarget && !selectedTargetId)}
-                                >
-                                    Cast
-                                </button>
-                                <button 
-                                    onclick={handleDefend}
-                                    disabled={!isMyTurn || loading}
-                                >
-                                    Parry
-                                </button>
-                            </div>
-                </div>
+                        <div class="action-buttons">
+                            <button
+                                onclick={handleAttack}
+                                disabled={!isMyTurn || !selectedScrollId || loading || (!isMultiTarget && !selectedTargetId)}
+                            >
+                                Cast
+                            </button>
+                            <button 
+                                onclick={handleDefend}
+                                disabled={!isMyTurn || loading}
+                            >
+                            Parry
+                            </button>
+                        </div>
+                    </div>
                 {/if}
 
             </div>

@@ -2,12 +2,15 @@
   import { logout } from '$lib/firebase/auth';
   import { goto } from '$app/navigation';
   import { authStore } from '$lib/stores/auth.svelte';
-	import FriendSystem from '$lib/components/social/FriendSystem.svelte';
-  import { createLobby } from '$lib/firebase/lobby';
+	import { createLobby } from '$lib/firebase/lobby';
   import { collection, query, where, onSnapshot } from 'firebase/firestore';
   import { db } from '$lib/firebase/clientSDK';
   import { joinLobby } from '$lib/firebase/lobby';
   import type { Lobby } from '$lib/types';
+
+  import FriendSystem from '$lib/components/social/FriendSystem.svelte';
+  
+  import '$lib/styles/home.css';
 
   let username = $derived(authStore.appUser?.username);
   let loading = $state(false);
@@ -61,28 +64,40 @@
 
 </script>
 
-<h1>Home</h1>
-<p> welcome {username}!</p>
-<button onclick={handleLogout}>Logout</button>
+<div class="dashboard-container">
+  <header class="main-header">
+    <div>
+      <h1>Home</h1>
+      <p class="welcome">Welcome, <span class="user-highlight">{username}</span>!</p>
+    </div>
+    <button class="btn-secondary" onclick={handleLogout}>Logout</button>
+  </header>
 
-<div>
-<a href="/ranking">Ranking</a>
+  <div class="dashboard-grid">
+    <div class="main-actions">
+      <button class="btn-primary" onclick={handleCreateLobby} disabled={loading}>
+        {loading ? 'Creating...' : 'Create Lobby'}
+      </button>
+      
+      <a href="/ranking" class="ranking-link">View Global Ranking</a>
+
+      {#if pendingInvites.length > 0}
+        <section class="invites-section">
+          <h2>Pending Invites</h2>
+          <div class="invites-list">
+            {#each pendingInvites as invite}
+              <div class="invite-card">
+                <span>Invite from <strong>{invite.players[0].username}</strong></span>
+                <button class="btn-small" onclick={() => handleJoin(invite.id)}>Join</button>
+              </div>
+            {/each}
+          </div>
+        </section>
+      {/if}
+    </div>
+
+    <div class="social-side">
+      <FriendSystem />
+    </div>
+  </div>
 </div>
-
-{#if pendingInvites.length > 0}
-  <section>
-    <h2>Pending invites</h2>
-    {#each pendingInvites as invite}
-      <div> <!-- note that the invite is always from the host, even if a member that isn't host is the real sender of the invite--> 
-        <span>Invite from {invite.players[0].username}</span>
-        <button onclick={() => handleJoin(invite.id)}>Join</button>
-      </div>
-    {/each}
-  </section>
-{/if}
-
-<button onclick={handleCreateLobby} disabled={loading}>
-  {loading ? 'Creating...' : 'Create lobby'}
-</button>
-
-<FriendSystem />

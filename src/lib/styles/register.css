@@ -1,0 +1,65 @@
+.auth-container {
+    display: flex;
+    flex-direction: column;
+    max-width: 400px;
+    margin: 40px auto;
+    padding: 30px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    text-align: center;
+  }
+
+  h1 {
+    color: var(--color-gold);
+    margin-bottom: 24px;
+    font-size: 2rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  input {
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 1.1rem;
+    transition: border-color var(--transition);
+  }
+
+  input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+  }
+
+  button {
+    padding: 12px;
+    font-size: 1.1rem;
+    margin-bottom: 16px;
+    width: 100%;
+  }
+
+  .error {
+    color: var(--color-danger);
+    margin-bottom: 16px;
+    font-size: 1rem;
+  }
+
+  a {
+    color: var(--color-muted);
+    text-decoration: none;
+    font-size: 0.95rem;
+    transition: color var(--transition);
+  }
+
+  a:hover {
+    color: var(--color-gold);
+  }
