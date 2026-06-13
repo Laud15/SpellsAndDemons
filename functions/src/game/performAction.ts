@@ -16,9 +16,7 @@ import {chooseEnemyMove} from "../engine/enemies";
 import {generateDrops} from "../engine/drops";
 import type {GamePlayer, GameEnemy, ScrollData, StatusInstance} from "../types";
 
-
 const db = getFirestore();
-
 
 async function executeEnemyAction(
   enemy: GameEnemy,
@@ -126,8 +124,14 @@ export async function processEnemyTurns(
   startIndex: number,
   players: GamePlayer[],
   enemies: GameEnemy[],
-): Promise<{players: GamePlayer[]; enemies: GameEnemy[]; nextIndex: number}> {
+): Promise<{
+  players: GamePlayer[];
+  enemies: GameEnemy[];
+  nextIndex: number;
+  actingEnemyIds: string[];
+}> {
   let index = startIndex;
+  const actingEnemyIds: string[] = [];
 
   while (index < turnOrder.length) {
     // all players dead
@@ -155,13 +159,14 @@ export async function processEnemyTurns(
     }
 
     // is an enemy -> execute and continue
+    actingEnemyIds.push(actorId);
     const result = await executeEnemyAction(enemy, players, enemies);
     players = result.players;
     enemies = result.enemies;
     index++;
   }
 
-  return {players, enemies, nextIndex: index};
+  return {players, enemies, nextIndex: index, actingEnemyIds};
 }
 
 export const performAction = onCall(
@@ -198,7 +203,10 @@ export const performAction = onCall(
     }
 
     // retrieve all actor of the game (players an enemies)
-    let players: GamePlayer[] = game.players;
+    let players: GamePlayer[] = game.players.map((p: GamePlayer) => ({
+      ...p,
+      hasAttacked: false, // resetta sempre all'inizio di ogni azione
+    }));
     let enemies: GameEnemy[] = game.enemies;
 
     // if the one who is gonna performe the turn is player found him
@@ -441,9 +449,10 @@ export const performAction = onCall(
               energy: p.stats.energy - energyCost,
             },
             hasActed: true,
+            hasAttacked: true,
           };
         }
-        return p;
+        return {...p, hasAttacked: false};
       });
 
       delay(1000);
@@ -465,7 +474,12 @@ export const performAction = onCall(
           })
         )
       );
-      await gameRef.update({players, enemies, phase: "game_over"});
+      await gameRef.update({
+        players,
+        enemies,
+        phase: "game_over",
+        lastAttackingEnemies: [],
+      });
       return {success: true};
     }
 
@@ -485,6 +499,7 @@ export const performAction = onCall(
         drop: drops,
         dropChooserIndex: 0,
         pendingLevelUps,
+        lastAttackingEnemies: [],
       });
       return {success: true};
     }
@@ -492,6 +507,8 @@ export const performAction = onCall(
     // GO TO NEXT ACTOR
 
     let nextIndex = game.currentActorIndex + 1;
+    let actingEnemyIds: string[] = [];
+
 
     // SKIP DEAD ACTORS
     while (nextIndex < game.turnOrder.length) {
@@ -506,6 +523,7 @@ export const performAction = onCall(
       nextIndex++;
     }
 
+
     // If thera are multiple consecutive enemy
     if (nextIndex < game.turnOrder.length) {
       const result = await processEnemyTurns(
@@ -516,6 +534,7 @@ export const performAction = onCall(
       players = result.players;
       enemies = result.enemies;
       nextIndex = result.nextIndex;
+      actingEnemyIds = result.actingEnemyIds;
       await delay(1500);
 
       enemies = enemies.filter((e) => e.hp > 0);
@@ -532,7 +551,16 @@ export const performAction = onCall(
             }
           )
         ));
-        await gameRef.update({players, enemies, phase: "game_over"});
+        console.log("=== BACKEND UPDATE ===");
+        console.log("actingEnemyIds:", actingEnemyIds);
+        console.log("enemies alive:", enemies.map((e) => e.instanceId));
+        await gameRef.update({
+          players,
+          enemies,
+          phase: "game_over",
+          lastActorId: uid,
+          lastAttackingEnemies: actingEnemyIds,
+        });
         return {success: true};
       }
 
@@ -540,8 +568,11 @@ export const performAction = onCall(
         const newWinsCount = game.winsCount + 1;
         const drops = generateDrops();
         const pendingLevelUps = alivePlayers.filter(
-          (p) => shouldLevelUp(game.winsCount, newWinsCount)).map((p) => p.uid
-        );
+          (p) => shouldLevelUp(game.winsCount, newWinsCount)
+        ).map((p) => p.uid);
+        console.log("=== BACKEND UPDATE ===");
+        console.log("actingEnemyIds:", actingEnemyIds);
+        console.log("enemies alive:", enemies.map((e) => e.instanceId));
         await gameRef.update(
           {
             players,
@@ -551,6 +582,8 @@ export const performAction = onCall(
             drop: drops,
             dropChooserIndex: 0,
             pendingLevelUps,
+            lastActorId: uid,
+            lastAttackingEnemies: actingEnemyIds ?? [],
           }
         );
         return {success: true};
@@ -593,6 +626,7 @@ export const performAction = onCall(
       players = result.players;
       enemies = result.enemies;
       nextIndex = result.nextIndex;
+      actingEnemyIds = result.actingEnemyIds;
       await delay(1500);
 
       if (nextIndex >= newTurnOrder.length) {
@@ -617,7 +651,16 @@ export const performAction = onCall(
             })
           )
         );
-        await gameRef.update({players, enemies, phase: "game_over"});
+        console.log("=== BACKEND UPDATE ===");
+        console.log("actingEnemyIds:", actingEnemyIds);
+        console.log("enemies alive:", enemies.map((e) => e.instanceId));
+        await gameRef.update({
+          players,
+          enemies,
+          phase: "game_over",
+          lastActorId: uid,
+          lastAttackingEnemies: actingEnemyIds,
+        });
         return {success: true};
       }
 
@@ -631,6 +674,9 @@ export const performAction = onCall(
           .filter((p) => shouldLevelUp(game.winsCount, newWinsCount))
           .map((p) => p.uid);
 
+        console.log("=== BACKEND UPDATE ===");
+        console.log("actingEnemyIds:", actingEnemyIds);
+        console.log("enemies alive:", enemies.map((e) => e.instanceId));
         await gameRef.update({
           players,
           enemies,
@@ -640,10 +686,15 @@ export const performAction = onCall(
           dropChooserIndex: 0,
           pendingLevelUps,
           turn: FieldValue.increment(1),
+          lastActorId: uid,
+          lastAttackingEnemies: actingEnemyIds ?? [],
         });
         return {success: true};
       }
 
+      console.log("=== BACKEND UPDATE ===");
+      console.log("actingEnemyIds:", actingEnemyIds);
+      console.log("enemies alive:", enemies.map((e) => e.instanceId));
       await gameRef.update({
         players,
         enemies,
@@ -651,14 +702,17 @@ export const performAction = onCall(
         currentActorIndex: nextIndex,
         phase: "player_turn",
         turn: FieldValue.increment(1),
+        lastActorId: uid,
+        lastAttackingEnemies: actingEnemyIds ?? [],
       });
     } else {
-      // still in progress: We simply pass the turn to the next player alive
       await gameRef.update({
         players,
         enemies,
         currentActorIndex: nextIndex,
         phase: "player_turn",
+        lastActorId: uid,
+        lastAttackingEnemies: actingEnemyIds, // ← ora valorizzato correttamente
       });
     }
 

@@ -72,6 +72,7 @@ export interface GamePlayer {
   moves: MoveInstance[];
   activeStatuses: StatusInstance[];
   hasActed: boolean;
+  hasAttacked?: boolean;
 }
 
 export interface GameEnemy {

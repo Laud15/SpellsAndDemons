@@ -500,6 +500,12 @@ div.sprite-container.dead {
   min-width: 280px;
 }
 
+.modal button.selected {
+    border: 2px solid gold;
+    background-color: rgba(255, 215, 0, 0.2);
+    outline: none;
+}
+
 /* ---- GAME OVER ---- */
 .gameover-overlay {
   position: fixed;

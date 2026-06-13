@@ -44,8 +44,12 @@ export const levelUp = onCall(
       throw new HttpsError("permission-denied", "No level up pending");
     }
 
-    // eslint-disable-next-line prefer-const
-    let players: GamePlayer[] = game.players;
+
+    let players: GamePlayer[] = game.players.map((p: GamePlayer) => ({
+      ...p,
+      hasAttacked: false, // resetta hasAttacked ad ogni level up
+    }));
+
     const playerIndex = players.findIndex((p) => p.uid === uid);
     const player = players[playerIndex];
 
@@ -78,6 +82,8 @@ export const levelUp = onCall(
     let currentActorIndex = game.currentActorIndex || 0;
     let enemies = game.enemies;
 
+    let actingEnemyIds: string[] = [];
+
     // when level up phase end the combat start again
     if (phase === "player_turn") {
       // Process enemy turns from the beginning (index 0)
@@ -89,6 +95,7 @@ export const levelUp = onCall(
       players = result.players;
       enemies = result.enemies;
       currentActorIndex = result.nextIndex;
+      actingEnemyIds = result.actingEnemyIds;
       await delay(1500);
 
       const allPlayersDead = players.every((p) => p.stats.hp <= 0);
@@ -128,6 +135,7 @@ export const levelUp = onCall(
         players,
         pendingLevelUps,
         phase,
+        lastAttackingEnemies: actingEnemyIds,
       });
     } else {
       await gameRef.update({
@@ -136,6 +144,7 @@ export const levelUp = onCall(
         currentActorIndex,
         pendingLevelUps,
         phase,
+        lastAttackingEnemies: actingEnemyIds,
       });
     }
     return {success: true};

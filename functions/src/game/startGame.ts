@@ -167,10 +167,12 @@ export const startGame = onCall(
 
     // the first actor can be an enemy
     await delay(500); // Ensure client is ready before enemy turns
+
     const enemyTurnResult = await processEnemyTurns(turnOrder, 0, players, enemies);
 
     players = enemyTurnResult.players;
     enemies = enemyTurnResult.enemies.filter((e) => e.hp > 0);
+    const actingEnemyIds = enemyTurnResult.actingEnemyIds;
 
     const allPlayersDead = players.every((p) => p.stats.hp <= 0);
     let phase = "player_turn";
@@ -191,6 +193,7 @@ export const startGame = onCall(
       enemies,
       currentActorIndex: startingActorIndex !== -1 ? startingActorIndex : 0,
       phase,
+      lastAttackingEnemies: actingEnemyIds,
     });
 
     return {success: true, gameId: lobbyId};

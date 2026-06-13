@@ -37,6 +37,7 @@ export const skipDrop = onCall(
 
     if (isLastChooser) {
       // all have choose/skip -> generate new enemies
+      let actingEnemyIds: string[] = [];
       const enemyIds = generateEnemyIds();
       const enemySnaps = await Promise.all(
         enemyIds.map((id) => db.collection("enemies").doc(id).get())
@@ -78,6 +79,8 @@ export const skipDrop = onCall(
         players = result.players;
         enemies = result.enemies;
         currentActorIndex = result.nextIndex;
+        actingEnemyIds = result.actingEnemyIds;
+
 
         // GAME OVER CHECK
         const allPlayersDead = players.every((p) => p.stats.hp <= 0);
@@ -101,6 +104,7 @@ export const skipDrop = onCall(
               players = result.players;
               enemies = result.enemies;
               currentActorIndex = result.nextIndex;
+              actingEnemyIds = result.actingEnemyIds;
             }
           }
 
@@ -138,6 +142,7 @@ export const skipDrop = onCall(
         drop: null,
         dropChooserIndex: 0,
         pendingLevelUps: alivePendingLevelUps,
+        lastAttackingEnemies: actingEnemyIds,
       });
       delay(1000);
     } else {

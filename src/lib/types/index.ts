@@ -76,6 +76,7 @@ export interface GamePlayer{
   moves: MoveInstance[];
   activeStatuses: StatusInstance[];
   hasActed: boolean;
+  hasAttacked?: boolean;
 }
 
 export interface GameEnemy{
@@ -110,4 +111,6 @@ export interface Game {
   drop: string[] | null; //dropped scrolls (an array of scrollId)
   dropChooserIndex: number; //index of the player that have to choose
   pendingLevelUps: string[] //array of players that are ready to level up
+  lastActorId?: string;
+  lastAttackingEnemies?: string[];
 }

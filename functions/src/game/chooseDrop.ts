@@ -140,6 +140,7 @@ export const chooseDrop = onCall(
         "player_turn";
 
       let currentActorIndex = 0;
+      let actingEnemyIds: string[] = [];
 
       if (phase === "player_turn") {
         await delay(500); // Allow UI to update before enemy turns
@@ -147,6 +148,7 @@ export const chooseDrop = onCall(
         players = result.players;
         enemies = result.enemies;
         currentActorIndex = result.nextIndex;
+        actingEnemyIds = result.actingEnemyIds;
         await delay(1500);
 
         // If all enemies have acted and the index finger goes over the tail,
@@ -169,6 +171,7 @@ export const chooseDrop = onCall(
               players = result.players;
               enemies = result.enemies;
               currentActorIndex = result.nextIndex;
+              actingEnemyIds = result.actingEnemyIds;
             }
           }
 
@@ -206,6 +209,7 @@ export const chooseDrop = onCall(
         drop: null,
         dropChooserIndex: 0,
         pendingLevelUps: alivePendingLevelUps,
+        lastAttackingEnemies: actingEnemyIds,
       });
     } else {
       await gameRef.update({
