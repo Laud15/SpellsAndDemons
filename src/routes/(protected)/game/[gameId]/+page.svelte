@@ -24,6 +24,9 @@
     //scroll's data from the db
     let scrollsData = $state<Record<string, ScrollData>>({});
 
+    //status's data from the db
+    let statusesData = $state<Record<string, { name: string }>>({});
+
     //id of the game, is taken from the url
     let gameId = $derived($page.params.gameId as string);
     //the stato of the game, read from the db
@@ -86,10 +89,16 @@
 
     //load the scrolls from db in scrollsData
     onMount(async () => {
-        const snap = await getDocs(collection(db, 'scrolls'));
-        const data: Record<string, ScrollData> = {};
-        snap.docs.forEach(d => { data[d.id] = d.data() as ScrollData; });
-        scrollsData = data;
+        const scrollSnap = await getDocs(collection(db, 'scrolls'));
+        const scrolls: Record<string, ScrollData> = {};
+        scrollSnap.docs.forEach(d => { scrolls[d.id] = d.data() as ScrollData; });
+        scrollsData = scrolls;
+
+        const statusSnap = await getDocs(collection(db, 'statuses'));
+        const statuses: Record<string, { name: string }> = {};
+        statusSnap.docs.forEach(d => { statuses[d.id] = d.data() as { name: string }; });
+        statusesData = statuses;
+        console.log('statusesData caricato:', statusesData);
     });
 
     //MAIN EFFECT
@@ -179,164 +188,176 @@
             }
         });
     });
-
-    // chiama questo quando qualcuno viene colpito
-    function triggerHitAnim(targetId: string, isEnemy: boolean) {
-        if (isEnemy) {
-            //if already hit, go idle and only after hit
-            if (enemyAnims[targetId] === 'hit') {
-                enemyAnims[targetId] = 'idle';
-                enemyAnims = {...enemyAnims};
-                setTimeout(() => {
-                    enemyAnims[targetId] = 'hit';
-                    enemyAnims = {...enemyAnims};
-                }, 32); 
-            } else {
-                enemyAnims[targetId] = 'hit';
-                enemyAnims = {...enemyAnims};
-            }
-        } else {
-            if (playerAnims[targetId] === 'hit') {
-                playerAnims[targetId] = 'idle';
-                playerAnims = {...playerAnims};
-                setTimeout(() => {
-                    playerAnims[targetId] = 'hit';
-                    playerAnims = {...playerAnims};
-                }, 32);
-            } else {
-                playerAnims[targetId] = 'hit';
-                playerAnims = {...playerAnims};
-            }
-        } 
-    }
+    
     //generateLogs compares the status before (prev) and after (next) a Firestore update and decides which animations to show and which messages to add to the log.
+    // ---------------------------------------------------------------------------
+    // ANIMATION HELPER
+    // ---------------------------------------------------------------------------
+    // Plays a one-shot animation (attack / hit / death) on a single actor and
+    // resolves after `duration` ms, so callers can `await` it and chain animations
+    // sequentially. If the actor is already in the requested state we briefly flip
+    // to 'idle' first: changing the value is what makes Svelte re-render and what
+    // makes the CSS animation restart from frame 0. Without this, replaying the
+    // same animation twice in a row (e.g. two consecutive hits) would do nothing.
+    async function playAnim(
+        id: string,
+        anim: 'attack' | 'hit' | 'death',
+        isEnemy: boolean,
+        duration = ANIM_DELAY
+    ) {
+        const current = isEnemy ? enemyAnims[id] : playerAnims[id];
+
+        // never interrupt a death animation
+        if (current === 'death') { return; }
+
+        // force a restart if we're already showing the same animation
+        if (current === anim) {
+            if (isEnemy) {
+                enemyAnims[id] = 'idle';
+                enemyAnims = { ...enemyAnims };
+            } else {
+                playerAnims[id] = 'idle';
+                playerAnims = { ...playerAnims };
+            }
+            await new Promise(r => setTimeout(r, 32));
+        }
+
+        if (isEnemy) {
+            enemyAnims[id] = anim;
+            enemyAnims = { ...enemyAnims };
+        } else {
+            playerAnims[id] = anim;
+            playerAnims = { ...playerAnims };
+        }
+
+        await new Promise(r => setTimeout(r, duration));
+    }
+
+    
+    // COMBAT LOG + ANIMATIONS
+    // ---------------------------------------------------------------------------
+    // generateLogs compares the state before (prev) and after (next) a Firestore
+    // update, decides which animations to play, in which order, and appends the
+    // matching messages to the combat log. Everything is awaited so a single
+    // Firestore update (which may bundle a player action AND several enemy turns)
+    // is replayed as a clean, ordered sequence rather than all at once.
+    //
+    // Order matches the real flow of a turn:
+    //   player attacks -> enemies attack -> enemies take damage -> enemies die ->
+    //   players take damage -> statuses applied -> phase change.
     async function generateLogs(prev: Game, next: Game) {
 
-        // 1. ATTACCO GIOCATORE
+        // 1. PLAYER ATTACK
+        // hasAttacked flips false -> true for whoever just acted. We only play it
+        // for OTHER players: the local player already saw their own attack in
+        // handleAttack (instant feedback before the server round-trip).
         for (const nextPlayer of next.players) {
             const prevPlayer = prev.players.find(p => p.uid === nextPlayer.uid);
-            if (!prevPlayer) continue;
+            if (!prevPlayer) { continue; }
             if (nextPlayer.hasAttacked && !prevPlayer.hasAttacked && nextPlayer.uid !== myUid) {
-            playerAnims[nextPlayer.uid] = 'attack';
-            playerAnims = {...playerAnims};
-            await new Promise(r => setTimeout(r, ANIM_DELAY));
-
-            playerAnims[nextPlayer.uid] = 'idle';
-            playerAnims = { ...playerAnims };
+                await playAnim(nextPlayer.uid, 'attack', false);
             }
         }
 
-        // 2. ATTACCO NEMICI — prima dell'hit così si vede l'attacco
-        for (const enemy of next.enemies) {
-            if (!(enemy.instanceId in enemyAnims)) {
-            enemyAnims[enemy.instanceId] = 'idle';
-            enemyAnims = {...enemyAnims};
-            }
-        }
-
+        // 2. ENEMY ATTACK
+        // lastAttackingEnemies lists every enemy that acted in THIS update, in
+        // order. We play their attack before showing the damage they dealt so the
+        // cause (attack) is seen before the effect (player hit). Skip enemies that
+        // are no longer present (died in this same update).
         const attackingEnemyIds = (next.lastAttackingEnemies ?? []) as string[];
-
         for (const enemyId of attackingEnemyIds) {
-            const enemyStillAlive = next.enemies.some(e => e.instanceId === enemyId);
-            if (!enemyStillAlive) continue;
-            if (enemyAnims[enemyId] === 'death') continue;
-
-            enemyAnims[enemyId] = 'attack';
-            enemyAnims = { ...enemyAnims };
-
-            await new Promise(r => setTimeout(r, ANIM_DELAY));
-
-            enemyAnims[enemyId] = 'idle';
-            enemyAnims = { ...enemyAnims };
-
+            const stillAlive = next.enemies.some(e => e.instanceId === enemyId);
+            if (!stillAlive) { continue; }
+            await playAnim(enemyId, 'attack', true);
         }
 
-        // 3. DANNI AI NEMICI — dopo l'attacco
+        // 3. ENEMY DAMAGE
+        // Any enemy whose hp dropped was hit by a player this update.
         for (const nextEnemy of next.enemies) {
             const prevEnemy = prev.enemies.find(e => e.instanceId === nextEnemy.instanceId);
             if (prevEnemy && nextEnemy.hp < prevEnemy.hp) {
-            const dmg = prevEnemy.hp - nextEnemy.hp;
-            gameStore.addLog(`⚔️ ${nextEnemy.name} takes ${dmg} damage`, 'damage-enemy');
-            triggerHitAnim(nextEnemy.instanceId, true);
-            await new Promise(r => setTimeout(r, ANIM_DELAY));
+                const dmg = prevEnemy.hp - nextEnemy.hp;
+                gameStore.addLog(`⚔️ ${nextEnemy.name} takes ${dmg} damage`, 'damage-enemy');
+                await playAnim(nextEnemy.instanceId, 'hit', true);
             }
         }
 
-        // 4. NEMICI MORTI
+        // 4. ENEMY DEATHS
+        // An enemy present in prev but missing in next has died. We keep its sprite
+        // on screen via deadEnemies long enough to play the death animation, then
+        // remove it.
         for (const prevEnemy of prev.enemies) {
             const stillAlive = next.enemies.find(e => e.instanceId === prevEnemy.instanceId);
             if (!stillAlive) {
-            deadEnemies = [...deadEnemies, prevEnemy];
-            enemyAnims[prevEnemy.instanceId] = 'death';
-            enemyAnims = {...enemyAnims};
-            gameStore.addLog(`💀 ${prevEnemy.name} defeated`, 'death');
-            await new Promise(r => setTimeout(r, ANIM_DELAY * 1.5));
-            deadEnemies = deadEnemies.filter(e => e.instanceId !== prevEnemy.instanceId);
+                deadEnemies = [...deadEnemies, prevEnemy];
+                enemyAnims[prevEnemy.instanceId] = 'death';
+                enemyAnims = { ...enemyAnims };
+                gameStore.addLog(`💀 ${prevEnemy.name} defeated`, 'death');
+                await new Promise(r => setTimeout(r, ANIM_DELAY * 1.5)); // death is longer
+                deadEnemies = deadEnemies.filter(e => e.instanceId !== prevEnemy.instanceId);
             }
         }
 
-        // 5. DANNI AI GIOCATORI
+        // 5. PLAYER DAMAGE / HEAL / DEATH
         for (const nextPlayer of next.players) {
             const prevPlayer = prev.players.find(p => p.uid === nextPlayer.uid);
-            if (!prevPlayer) continue;
+            if (!prevPlayer) { continue; }
 
+            // took damage
             if (nextPlayer.stats.hp < prevPlayer.stats.hp) {
-            const dmg = prevPlayer.stats.hp - nextPlayer.stats.hp;
-            gameStore.addLog(`🩸 ${nextPlayer.username} takes ${dmg} damage`, 'damage-player');
-            triggerHitAnim(nextPlayer.uid, false);
-            await new Promise(r => setTimeout(r, ANIM_DELAY));
+                const dmg = prevPlayer.stats.hp - nextPlayer.stats.hp;
+                gameStore.addLog(`🩸 ${nextPlayer.username} takes ${dmg} damage`, 'damage-player');
+                await playAnim(nextPlayer.uid, 'hit', false);
             }
 
+            // got healed (no animation, just a log)
             if (nextPlayer.stats.hp > prevPlayer.stats.hp) {
-            const heal = nextPlayer.stats.hp - prevPlayer.stats.hp;
-            gameStore.addLog(`💚 ${nextPlayer.username} recovers ${heal} HP`, 'heal');
+                const heal = nextPlayer.stats.hp - prevPlayer.stats.hp;
+                gameStore.addLog(`💚 ${nextPlayer.username} recovers ${heal} HP`, 'heal');
             }
 
+            // died this update
             if (nextPlayer.stats.hp <= 0 && prevPlayer.stats.hp > 0) {
-            await new Promise(r => setTimeout(r, ANIM_DELAY));
-            playerAnims[nextPlayer.uid] = 'death';
-            playerAnims = {...playerAnims};
-            await new Promise(r => setTimeout(r, ANIM_DELAY * 1.5));
+                await playAnim(nextPlayer.uid, 'death', false, ANIM_DELAY * 1.5);
             }
         }
 
-        // 6. STATUS NEMICI
+        // 6. NEW STATUSES ON ENEMIES
+        // A status present in next but not in prev was just applied -> small hit reaction as visual feedback.
         for (const nextEnemy of next.enemies) {
             const prevEnemy = prev.enemies.find(e => e.instanceId === nextEnemy.instanceId);
-            if (!prevEnemy) continue;
+            if (!prevEnemy) { continue; }
             for (const status of nextEnemy.activeStatuses ?? []) {
-            if (!prevEnemy.activeStatuses.find(s => s.id === status.id)) {
-                gameStore.addLog(`⬇️ ${nextEnemy.name} is affected by ${status.id}`, 'status-enemy');
-                triggerHitAnim(nextEnemy.instanceId, true);
-                await new Promise(r => setTimeout(r, ANIM_DELAY));
-            }
+                if (!prevEnemy.activeStatuses.find(s => s.id === status.id)) {
+                    gameStore.addLog(`⬇️ ${nextEnemy.name} is affected by ${statusesData[status.id]?.name ?? status.id}`, 'status-enemy');
+                    await playAnim(nextEnemy.instanceId, 'hit', true);
+                }
             }
         }
 
-        // 7. STATUS GIOCATORI
+        // 7. NEW STATUSES ON PLAYERS
         for (const nextPlayer of next.players) {
             const prevPlayer = prev.players.find(p => p.uid === nextPlayer.uid);
-            if (!prevPlayer) continue;
+            if (!prevPlayer) { continue; }
             for (const status of nextPlayer.activeStatuses ?? []) {
-            if (!prevPlayer.activeStatuses.find(s => s.id === status.id)) {
-                gameStore.addLog(`🌀 ${nextPlayer.username} is affected by ${status.id}`, 'status-player');
-                triggerHitAnim(nextPlayer.uid, false);
-                await new Promise(r => setTimeout(r, ANIM_DELAY));
-            }
+                if (!prevPlayer.activeStatuses.find(s => s.id === status.id)) {
+                    gameStore.addLog(`🌀 ${nextPlayer.username} is affected by ${status.id}`, 'status-player');
+                    await playAnim(nextPlayer.uid, 'hit', false);
+                }
             }
         }
 
-        // 8. CAMBIO FASE
+        // 8. PHASE CHANGE
         if (prev.phase !== next.phase) {
             if (next.phase === 'drop_phase') {
-            deadEnemies = [];
-            gameStore.addLog('📜 Choose a scroll!', 'phase');
+                deadEnemies = [];
+                gameStore.addLog('📜 Choose a scroll!', 'phase');
             }
             if (next.phase === 'level_up') {
-            gameStore.addLog('💡 Level up!', 'phase');
+                gameStore.addLog('💡 Level up!', 'phase');
             }
         }
-        }
+    }
     async function handleAttack() {
 
         if (!selectedScrollId || !game) { return; } //id data is missing don't do anything
@@ -484,7 +505,7 @@
                         {#if player.activeStatuses.length > 0}
                             <div class="enemy-statuses">
                                 {#each player.activeStatuses ?? [] as status}
-                                    <span class="status-badge enemy-status">{status.id}</span>
+                                    <span class="status-badge enemy-status">{statusesData[status.id]?.name ?? status.id}</span>
                                 {/each}
                             </div>
                         {/if}
@@ -536,7 +557,7 @@
                         {#if enemy.activeStatuses.length > 0}
                             <div class="enemy-statuses">
                                 {#each enemy.activeStatuses ?? [] as status}
-                                    <span class="status-badge enemy-status">{status.id}</span>
+                                   <span class="status-badge enemy-status">{statusesData[status.id]?.name ?? status.id}</span>
                                 {/each}
                             </div>
                         {/if}
@@ -702,7 +723,7 @@
                     {#if myPlayer.activeStatuses.length>0}
                         <h4>Active status</h4>
                         {#each myPlayer.activeStatuses as status}
-                            <span class="status-badge">{status.id} ({status.turnsLeft})</span>
+                            <span class="status-badge">{statusesData[status.id]?.name ?? status.id} ({status.turnsLeft})</span>
                         {/each}
                     {/if}
                 </div>

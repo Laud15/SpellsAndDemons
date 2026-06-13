@@ -227,7 +227,7 @@ export const performAction = onCall(
             activeStatuses: [
               // apply stone skin lv 1 effect
               ...p.activeStatuses.filter((s) => s.id !== "stone_skin"),
-              {id: "stone_skin", turnsLeft: 1, value: 0.5},
+              {id: "stone_skin", turnsLeft: 2, value: 0.5},
             ],
             hasActed: true,
           };
@@ -551,9 +551,6 @@ export const performAction = onCall(
             }
           )
         ));
-        console.log("=== BACKEND UPDATE ===");
-        console.log("actingEnemyIds:", actingEnemyIds);
-        console.log("enemies alive:", enemies.map((e) => e.instanceId));
         await gameRef.update({
           players,
           enemies,
@@ -570,9 +567,6 @@ export const performAction = onCall(
         const pendingLevelUps = alivePlayers.filter(
           (p) => shouldLevelUp(game.winsCount, newWinsCount)
         ).map((p) => p.uid);
-        console.log("=== BACKEND UPDATE ===");
-        console.log("actingEnemyIds:", actingEnemyIds);
-        console.log("enemies alive:", enemies.map((e) => e.instanceId));
         await gameRef.update(
           {
             players,
@@ -626,7 +620,7 @@ export const performAction = onCall(
       players = result.players;
       enemies = result.enemies;
       nextIndex = result.nextIndex;
-      actingEnemyIds = result.actingEnemyIds;
+      actingEnemyIds = [...actingEnemyIds, ...result.actingEnemyIds];
       await delay(1500);
 
       if (nextIndex >= newTurnOrder.length) {
@@ -651,9 +645,6 @@ export const performAction = onCall(
             })
           )
         );
-        console.log("=== BACKEND UPDATE ===");
-        console.log("actingEnemyIds:", actingEnemyIds);
-        console.log("enemies alive:", enemies.map((e) => e.instanceId));
         await gameRef.update({
           players,
           enemies,
@@ -674,9 +665,6 @@ export const performAction = onCall(
           .filter((p) => shouldLevelUp(game.winsCount, newWinsCount))
           .map((p) => p.uid);
 
-        console.log("=== BACKEND UPDATE ===");
-        console.log("actingEnemyIds:", actingEnemyIds);
-        console.log("enemies alive:", enemies.map((e) => e.instanceId));
         await gameRef.update({
           players,
           enemies,
@@ -692,9 +680,6 @@ export const performAction = onCall(
         return {success: true};
       }
 
-      console.log("=== BACKEND UPDATE ===");
-      console.log("actingEnemyIds:", actingEnemyIds);
-      console.log("enemies alive:", enemies.map((e) => e.instanceId));
       await gameRef.update({
         players,
         enemies,
