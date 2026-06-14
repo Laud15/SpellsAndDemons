@@ -19,31 +19,76 @@ the `games` collection directly); Firestore Security Rules enforce this.
 - A Firebase project on the **Blaze** plan (Cloud Functions require it)
 - Firebase CLI: `npm install -g firebase-tools`
 
-## Setup
+## 1. Clone & install
 
 ```bash
-# 1. clone
 git clone <REPO_URL>
 cd Spells_and_Demons
 
-# 2. install dependencies (root app + cloud functions)
+# install dependencies (root app + cloud functions)
 npm install
 cd functions && npm install && cd ..
 
-# 3. log in to Firebase and select your project
+# log in to Firebase and select your project
 firebase login
 firebase use <YOUR_PROJECT_ID>
 ```
 
-Then add your Firebase web config in `src/lib/firebase/clientSDK.ts`
-(the `firebaseConfig` object, copied from the Firebase console).
+## 2. Firebase project setup
 
-> **Note — seed data:** the game reads its content from the Firestore
-> collections `scrolls`, `statuses`, and `enemies`. These must be populated in
-> Firestore for the game to work. Enable **Email/Password** authentication in
-> the Firebase console as well.
+In the Firebase console for your own project:
 
-## Run locally
+- **Authentication** -> enable the **Email/Password** sign-in method.
+- **Firestore** -> create a database (production mode is fine, the rules are in
+  this repo).
+- Copy your **web app config** into `src/lib/firebase/clientSDK.ts`
+  (the `firebaseConfig` object).
+
+## 3. Credentials (NOT in the repo)
+
+These files contain private keys and are **git-ignored**, so you must create
+your own copies. They are tied to *your* Firebase project.
+
+**a) Service account key** — used only by the seed script (Admin SDK).
+Firebase console -> Project settings -> Service accounts -> *Generate new
+private key*. Save the downloaded file as:
+
+```
+functions/src/seed/serviceAccountKey.json
+```
+
+**b) Functions environment** — create `functions/.env.local` for running the
+functions locally:
+
+```
+VAPID_PUBLIC_KEY="..."
+VAPID_PRIVATE_KEY="..."
+BACKEND_EMAIL="your-contact@email.com"
+```
+
+Generate the VAPID key pair with:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+`BACKEND_EMAIL` is any contact email (required by the Web Push protocol).
+The **public** VAPID key is also used by the client to subscribe to push
+notifications.
+
+## 4. Seed the game content
+
+The game reads its static content (spells, statuses, enemies) from Firestore.
+Populate the `scrolls`, `statuses`, and `enemies` collections by running the
+seed script once (needs the service account key from step 3a):
+
+```bash
+cd functions
+npx ts-node --project tsconfig.json src/seed/seedData.ts
+cd ..
+```
+
+## 5. Run locally
 
 ```bash
 # standard dev server (fast, hot reload) — best for working on the UI
@@ -59,11 +104,16 @@ npm run build
 node build/index.js     # serves on http://localhost:3000
 ```
 
-## Deploy backend
-
-After changing Cloud Functions or Security Rules:
+## 6. Deploy
 
 ```bash
+# Cloud Functions read VAPID keys from Firebase Secret Manager (not .env.local),
+# so set them once before the first deploy:
+firebase functions:secrets:set VAPID_PUBLIC_KEY
+firebase functions:secrets:set VAPID_PRIVATE_KEY
+firebase functions:secrets:set BACKEND_EMAIL
+
+# deploy functions and security rules
 firebase deploy --only functions
 firebase deploy --only firestore:rules
 ```
@@ -117,15 +167,15 @@ firebase deploy --only firestore:rules
 │       │   ├── combat.ts
 │       │   ├── enemies.ts
 │       │   └── drops.ts
-|       ├── lobby/
-|       |   └── sendLobbyInviteNotification.ts
-|       ├── notifications/
-|       |   └── sendPushNotifications.ts
-|       ├── seed/ #this one needs private key, is used to upload moves, enemy and status in the db
-|       |   └── seedData.ts
-|       ├── social/
-|       |   ├── acceptFriendRequest.ts
-|       |   └── sendFriendRequestNotification.ts
+│       ├── lobby/
+│       │   └── sendLobbyInviteNotification.ts
+│       ├── notifications/
+│       │   └── sendPushNotifications.ts
+│       ├── seed/                     # needs serviceAccountKey.json (git-ignored)
+│       │   └── seedData.ts           # uploads scrolls / statuses / enemies
+│       ├── social/
+│       │   ├── acceptFriendRequest.ts
+│       │   └── sendFriendRequestNotification.ts
 │       └── types/
 │
 ├── static/                           # served as-is
@@ -144,7 +194,7 @@ firebase deploy --only firestore:rules
 | Collection | Purpose |
 |------------|---------|
 | `users` | profile, score, friends, presence status |
-| `usernames` | username → uid reservation (uniqueness) |
+| `usernames` | username -> uid reservation (uniqueness) |
 | `friendRequests` | pending / accepted friend requests |
 | `lobbies` | pre-game rooms |
 | `games` | active game state (written only by Cloud Functions) |
