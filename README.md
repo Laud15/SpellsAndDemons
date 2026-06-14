@@ -117,6 +117,15 @@ firebase deploy --only firestore:rules
 │       │   ├── combat.ts
 │       │   ├── enemies.ts
 │       │   └── drops.ts
+|       ├── lobby/
+|       |   └── sendLobbyInviteNotification.ts
+|       ├── notifications/
+|       |   └── sendPushNotifications.ts
+|       ├── seed/ #this one needs private key, is used to upload moves, enemy and status in the db
+|       |   └── seedData.ts
+|       ├── social/
+|       |   ├── acceptFriendRequest.ts
+|       |   └── sendFriendRequestNotification.ts
 │       └── types/
 │
 ├── static/                           # served as-is
