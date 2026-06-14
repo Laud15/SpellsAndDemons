@@ -1,5 +1,54 @@
-/* ---- MAIN LAYOUT  ---- */
+/* ============================================================
+   GAME.CSS — battlefield + HUD
+   Relies on variables from global.css.
+   Sprite sizing is controlled by a single --actor-scale variable,
+   stepped at breakpoints; the "active" pop is always relative to it.
+   ============================================================ */
+  
+/* ---- DISCREET SCROLLBARS (battlefield sides, hud panels) ---- */
+.players-side,
+.enemies-side,
+.players-hu,
+.center-hud,
+.stats-panel,
+.combat-log,
+.invite-list {
+  scrollbar-width: thin;                              /* Firefox */
+  scrollbar-color: var(--color-border) transparent;  /* thumb / track */
+}
+
+/* Chrome / Safari / Edge */
+.players-side::-webkit-scrollbar,
+.enemies-side::-webkit-scrollbar,
+.players-hu::-webkit-scrollbar,
+.center-hud::-webkit-scrollbar,
+.stats-panel::-webkit-scrollbar,
+.combat-log::-webkit-scrollbar {
+  width: 6px;
+}
+.players-side::-webkit-scrollbar-track,
+.enemies-side::-webkit-scrollbar-track,
+.players-hu::-webkit-scrollbar-track,
+.center-hud::-webkit-scrollbar-track,
+.stats-panel::-webkit-scrollbar-track,
+.combat-log::-webkit-scrollbar-track {
+  background: transparent;
+}
+.players-side::-webkit-scrollbar-thumb,
+.enemies-side::-webkit-scrollbar-thumb,
+.players-hu::-webkit-scrollbar-thumb,
+.center-hud::-webkit-scrollbar-thumb,
+.stats-panel::-webkit-scrollbar-thumb,
+.combat-log::-webkit-scrollbar-thumb {
+  background: rgba(75, 54, 95, 0.5);   /* muted purple, blends with theme */
+  border-radius: 3px;
+}
+
+/* ---- MAIN LAYOUT ---- */
 .game-container {
+  /* base scale for every actor; media queries override only this */
+  --actor-scale: 1;
+
   width: 100vw;
   height: 100dvh;
   display: flex;
@@ -14,11 +63,11 @@
 /* ---- SCORE BAR ---- */
 .score-display {
   display: flex;
-  gap: 1.5rem;
-  padding: 4px 1rem;
+  gap: var(--space-lg);
+  padding: var(--space-xs) var(--space-md);
   background: rgba(0, 0, 0, 0.5);
   font-size: 0.78rem;
-  color: gold;
+  color: var(--color-gold);
   letter-spacing: 0.05em;
   flex-shrink: 0;
 }
@@ -29,84 +78,63 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 0 20px 20px 20px;
-  overflow: hidden;
-  min-height: 0;
-  position: relative;
-  min-height: 150px;
   gap: 3rem;
+  padding: 0 var(--space-lg) var(--space-lg);
+  min-height: 150px;
+  overflow: hidden;
+  position: relative;
 }
 
+/* players on the left, enemies on the right; both stay 2x2 everywhere */
 .players-side,
 .enemies-side {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: var(--space-sm);
   align-items: center;
   justify-items: center;
   max-height: 100%;
   overflow-y: auto;
   scrollbar-width: thin;
-  flex-shrink: 1;
   width: fit-content;
 }
 
 /* ---- SPRITE CONTAINER ---- */
-button.sprite-container {
+/* Both the interactive <button> and the dead-enemy <div> share this look,
+   so we target the class once and only differentiate where needed. */
+.sprite-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-
+  gap: var(--space-xs);
   min-height: 130px;
-
+  padding: 6px;
   background: none;
   border: 2px solid transparent;
-  padding: 6px;
   border-radius: 8px;
-  cursor: pointer;
+  /* base size driven by the variable; active state multiplies it */
+  transform: scale(var(--actor-scale));
   transition: filter 0.2s, transform 0.2s, border-color 0.2s;
-  gap: 4px;
 }
 
-button.sprite-container:hover:not(:disabled) {
-  background: none;
-}
+button.sprite-container { cursor: pointer; }
 
 button.sprite-container.active {
-  filter: drop-shadow(0 0 10px gold);
-  transform: scale(1.08);
+  filter: drop-shadow(0 0 10px var(--color-gold));
+  /* always 8% bigger than the current base scale -> no conflict */
+  transform: scale(calc(var(--actor-scale) * 1.08));
 }
 
-button.sprite-container.selected {
-  border-color: gold;
-}
+button.sprite-container.selected        { border-color: var(--color-gold); }
+button.sprite-container.enemy.selected  { border-color: var(--color-danger); }
 
-button.sprite-container.enemy.selected {
-  border-color: #e74c3c;
-}
-
-button.sprite-container.dead {
+.sprite-container.dead {
   opacity: 0.35;
   pointer-events: none;
 }
 
-/* Ensure dead enemy divs have same sizing as buttons */
-div.sprite-container.dead {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  min-height: 130px;
-  background: none;
-  padding: 6px;
-  border-radius: 8px;
-  gap: 4px;
-  opacity: 0.35;
-  pointer-events: none;
-}
-
-/* ---- STATS BAR  ---- */
+/* ---- HP / ENERGY BARS (shared shell) ---- */
 .player-hp-bar,
 .player-energy-bar,
 .enemy-hp-bar,
@@ -118,55 +146,35 @@ div.sprite-container.dead {
   overflow: hidden;
 }
 
-.player-hp-fill {
-  height: 100%;
-  background: #2ecc71;
-  border-radius: 3px;
-  transition: width 0.4s ease;
-}
-
-.player-energy-fill {
-  height: 100%;
-  background: #3498db;
-  border-radius: 3px;
-  transition: width 0.4s ease;
-}
-
-.enemy-hp-fill {
-  height: 100%;
-  background: #e74c3c;
-  border-radius: 3px;
-  transition: width 0.4s ease;
-}
-
+.player-hp-fill,
+.player-energy-fill,
+.enemy-hp-fill,
 .enemy-energy-fill {
   height: 100%;
-  background: #eb0feb;
   border-radius: 3px;
   transition: width 0.4s ease;
 }
 
+.player-hp-fill      { background: var(--color-hp); }
+.player-energy-fill  { background: var(--color-energy); }
+.enemy-hp-fill       { background: var(--color-danger); }
+.enemy-energy-fill   { background: #eb0feb; } /* enemy mana: intentional magenta, no token */
+
+/* ---- LABELS ---- */
 .dead-label {
   font-size: 0.65rem;
-  color: #e74c3c;
+  color: var(--color-danger);
   font-weight: bold;
   letter-spacing: 0.1em;
 }
 
-.player-name {
-  font-size: 0.72rem;
-  color: white;
-  text-shadow: 1px 1px 3px black;
-  display: block;
-  text-align: center;
-}
-
+.player-name,
 .enemy-name {
   display: block;
   text-align: center;
   font-size: 0.7rem;
-  color: white;
-  text-shadow: 1px 1px 3px black;
+  color: #fff;
+  text-shadow: 1px 1px 3px #000;
 }
 
 .enemy-statuses {
@@ -181,82 +189,79 @@ div.sprite-container.dead {
   background: rgba(231, 76, 60, 0.5);
   padding: 1px 4px;
   border-radius: 3px;
-  color: white;
+  color: #fff;
 }
 
 /* ---- TURN ORDER ---- */
 .turn-order {
   display: flex;
   gap: 6px;
-  padding: 6px 1rem;
+  padding: 6px var(--space-md);
   background: rgba(0, 0, 0, 0.7);
-  border-bottom: 1px solid #4B365F;
+  border-bottom: 1px solid var(--color-border);
   overflow-x: auto;
   flex-shrink: 0;
   scrollbar-width: none;
 }
-
 .turn-order::-webkit-scrollbar { display: none; }
 
 .turn-token {
   padding: 3px 10px;
   border-radius: 20px;
   font-size: 0.7rem;
-  color: #9ca3af;
+  color: var(--color-muted);
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid transparent;
   white-space: nowrap;
   flex-shrink: 0;
   transition: all 0.2s ease;
 }
-
 .turn-token.current {
-  background: gold;
+  background: var(--color-gold);
   color: #000;
   font-weight: 700;
-  border-color: gold;
+  border-color: var(--color-gold);
 }
-
 .turn-token.is-enemy {
-  color: #e74c3c;
+  color: var(--color-danger);
   border-color: rgba(239, 68, 68, 0.3);
 }
 
 /* ---- HUD ---- */
 .hud {
   display: grid;
-  grid-template-columns: 200px 1fr 160px 190px;
-  gap: 0.75rem;
+  /* players | moves | stats | combat-log
+    moves get less room, the log gets more */
+  grid-template-columns: 200px minmax(0, 1.2fr) 150px minmax(280px, 1.5fr);
+  gap: var(--space-sm);
   background: rgba(10, 8, 20, 0.92);
-  border-top: 2px solid #4B365F;
-  padding: 0.75rem;
+  border-top: 2px solid var(--color-border);
+  padding: var(--space-sm);
   height: 270px;
-  flex-shrink: 0;
-  z-index: 10;
-  overflow: hidden;
   max-height: 35dvh;
+  flex-shrink: 0;
+  overflow: hidden;
+  z-index: 10;
 }
-
 /* ---- PLAYER CARDS ---- */
 .players-hu {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  max-height: 150px;
   overflow-y: auto;
   scrollbar-width: thin;
-  max-height: 150px;
 }
 
 .player-card {
   background: rgba(75, 54, 95, 0.25);
-  border: 1px solid #4B365F;
-  border-radius: 6px;
-  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 6px var(--space-sm);
   transition: border-color 0.2s;
 }
-
 .player-card.my-turn {
-  border-color: gold;
+  border-color: var(--color-gold);
   box-shadow: 0 0 8px rgba(240, 180, 41, 0.3);
 }
 
@@ -266,13 +271,7 @@ div.sprite-container.dead {
   gap: 5px;
   margin-bottom: 3px;
 }
-
-.bar-label {
-  font-size: 0.6rem;
-  color: #9ca3af;
-  width: 18px;
-}
-
+.bar-label { font-size: 0.6rem; color: var(--color-muted); width: 18px; }
 .bar {
   flex: 1;
   height: 7px;
@@ -280,19 +279,12 @@ div.sprite-container.dead {
   border-radius: 4px;
   overflow: hidden;
 }
-
-.bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.4s ease;
-}
-
-.bar-fill.hp     { background: #2ecc71; }
-.bar-fill.energy { background: #3498db; }
-
+.bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+.bar-fill.hp     { background: var(--color-hp); }
+.bar-fill.energy { background: var(--color-energy); }
 .bar-value {
   font-size: 0.6rem;
-  color: #9ca3af;
+  color: var(--color-muted);
   width: 44px;
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -300,12 +292,12 @@ div.sprite-container.dead {
 
 /* ---- CENTER HUD ---- */
 .center-hud {
-  overflow-y: auto;
-  scrollbar-width: thin;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  color: #e0e0e0;
+  gap: var(--space-sm);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  color: var(--color-text);
 }
 
 .moves-panel,
@@ -315,68 +307,36 @@ div.sprite-container.dead {
 .gameover-panel {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-sm);
 }
 
 .move-btn {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  background: rgba(75, 54, 95, 0.5);
-  border: 1px solid #4B365F;
-  color: #e0e0e0;
-  padding: 6px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-  text-align: left;
   gap: 2px;
+  background: rgba(75, 54, 95, 0.5);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: 6px var(--space-sm);
+  border-radius: var(--radius);
+  text-align: left;
+  /* override global button min-height: these are compact list items */
+  min-height: 0;
   transition: border-color 0.2s, background 0.2s;
 }
-
 .move-btn.selected {
-  border-color: gold;
+  border-color: var(--color-gold);
   background: rgba(255, 215, 0, 0.15);
 }
+.move-name  { font-size: 0.75rem; color: var(--color-text); font-weight: 600; }
+.move-stats { font-size: 0.62rem; color: var(--color-muted); }
 
-.move-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
+.action-buttons { display: flex; gap: var(--space-sm); margin-top: var(--space-xs); }
+.action-buttons button { flex: 1; min-height: 0; padding: 6px; font-size: 0.75rem; }
 
-.move-name {
-  font-size: 0.75rem;
-  color: #e2d9f3;
-  font-weight: 600;
-}
-
-.move-stats {
-  font-size: 0.62rem;
-  color: #9ca3af;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 4px;
-}
-
-.action-buttons button {
-  flex: 1;
-  padding: 6px;
-  font-size: 0.75rem;
-}
-
-.hint {
-  font-size: 0.72rem;
-  color: #f39c12;
-  font-style: italic;
-}
-
-.turn-warning {
-  font-size: 0.78rem;
-  color: #9ca3af;
-  font-style: italic;
-}
+.hint         { font-size: 0.72rem; color: #f39c12; font-style: italic; }
+.turn-warning { font-size: 0.78rem; color: var(--color-muted); font-style: italic; }
 
 .scroll-icon {
   width: 24px;
@@ -388,95 +348,50 @@ div.sprite-container.dead {
 /* ---- STATS PANEL ---- */
 .stats-panel {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: var(--color-muted);
   overflow-y: auto;
   scrollbar-width: thin;
 }
-
-.stats-panel h3 {
-  color: #e0e0e0;
-  margin: 0 0 0.5rem;
-  font-size: 0.8rem;
-}
-
-.stats-panel p {
-  padding: 2px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-}
+.stats-panel h3 { color: var(--color-text); margin-bottom: var(--space-sm); font-size: 0.8rem; }
+.stats-panel p  { padding: 2px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
 
 .status-badge {
   display: inline-block;
   background: rgba(75, 54, 95, 0.6);
-  border: 1px solid #4B365F;
+  border: 1px solid var(--color-border);
   border-radius: 20px;
   padding: 1px 7px;
   font-size: 0.62rem;
   margin: 2px 2px 0 0;
-  color: #e0e0e0;
+  color: var(--color-text);
 }
 
 /* ---- COMBAT LOG ---- */
 .combat-log {
-  overflow-y: auto;
-  font-size: 0.82rem;
-  color: #9ca3af;
-  border-left: 1px solid #4B365F;
-  padding-left: 0.6rem;
-  scrollbar-width: thin;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-width: 220px; 
+  overflow-y: auto;
+  font-size: 0.82rem;
+  color: var(--color-muted);
+  border-left: 1px solid var(--color-border);
+  padding-left: 0.6rem;
 }
 
 .combat-log p {
   padding: 3px 4px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   line-height: 1.4;
-  margin: 0;
   border-radius: 3px;
 }
-
-.log-damage-player {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.08);
-}
-
-.log-damage-enemy {
-  color: #f0b429;
-  background: rgba(240, 180, 41, 0.08);
-}
-
-.log-heal {
-  color: #22c55e;
-  background: rgba(34, 197, 94, 0.08);
-}
-
-.log-death {
-  color: #9ca3af;
-  font-style: italic;
-}
-
-.log-status-enemy {
-  color: #a855f7;
-  background: rgba(168, 85, 247, 0.08);
-}
-
-.log-status-player {
-  color: #f755c6;
-  background: rgba(79, 24, 130, 0.08);
-}
-
-.log-phase {
-  color: #f5b70b;
-  background: rgba(244, 242, 242, 0.08);
-  font-weight: 600;
-}
-
-.log-default {
-  color: #9ca3af;
-}
-
+.log-damage-player { color: var(--color-danger); background: rgba(239, 68, 68, 0.08); }
+.log-damage-enemy  { color: var(--color-gold);   background: rgba(240, 180, 41, 0.08); }
+.log-heal          { color: var(--color-hp);     background: rgba(34, 197, 94, 0.08); }
+.log-death         { color: var(--color-muted);  font-style: italic; }
+.log-status-enemy  { color: #a855f7;             background: rgba(168, 85, 247, 0.08); }
+.log-status-player { color: #f755c6;             background: rgba(79, 24, 130, 0.08); }
+.log-phase         { color: var(--color-gold);   background: rgba(244, 242, 242, 0.08); font-weight: 600; }
+.log-default       { color: var(--color-muted); }
 
 /* ---- MODAL ---- */
 .modal-overlay {
@@ -488,22 +403,19 @@ div.sprite-container.dead {
   justify-content: center;
   z-index: 100;
 }
-
 .modal {
-  background: #0f0d1a;
-  border: 2px solid #4B365F;
-  border-radius: 6px;
-  padding: 1.5rem;
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-lg);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-sm);
   min-width: 280px;
 }
-
 .modal button.selected {
-    border: 2px solid gold;
-    background-color: rgba(255, 215, 0, 0.2);
-    outline: none;
+  border: 2px solid var(--color-gold);
+  background: rgba(255, 215, 0, 0.2);
 }
 
 /* ---- GAME OVER ---- */
@@ -517,198 +429,60 @@ div.sprite-container.dead {
   z-index: 200;
   animation: fadeIn 0.5s ease;
 }
-
 .gameover-content {
   text-align: center;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-sm);
 }
+.gameover-content h1 { font-size: 3rem; color: var(--color-danger); }
+.gameover-content p  { color: var(--color-muted); font-size: 1rem; }
+.redirect-msg        { color: var(--color-muted); font-size: 0.9rem; }
 
-.gameover-content h1 {
-  font-size: 3rem;
-  color: #e74c3c;
-}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-.gameover-content p {
-  color: #9ca3af;
-  font-size: 1rem;
-}
+/* ============================================================
+   RESPONSIVE
+   Width steps: re-stack the HUD and shrink spacing.
+   Sprite size is handled separately via --actor-scale (height steps),
+   so it never fights with the .active pop.
+   ============================================================ */
 
-.redirect-msg {
-  color: #9ca3af;
-  font-size: 0.9rem;
-}
-
-/* ---- ANIMATIONS ---- */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-/* ---- RESPONSIVE ---- */
+/* ---- HUD re-stacking by width ---- */
 @media (max-width: 768px) {
   .hud {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto auto;
+    grid-template-columns: 1fr;     /* stack the 4 panels vertically */
     height: auto;
     max-height: 45dvh;
     overflow-y: auto;
-    gap: 0.5rem;
-    padding: 0.5rem;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
   }
-
-  .combat-log {
-    grid-column: 1;
-    max-height: 80px;
-  }
-
-  .battlefield {
-    padding: 0.25rem 1rem;
-    justify-content: center;
-    gap: 2rem;
-  }
-
-  button.sprite-container {
-    min-height: 100px;
-  }
-
-  .players-side,
-  .enemies-side {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
+  .combat-log { max-height: 80px; }
+  .battlefield { gap: 2rem; padding: var(--space-xs) var(--space-md); }
 }
 
 @media (max-width: 480px) {
-  .hud {
-    grid-template-columns: 1fr;
-    max-height: 50dvh;
-  }
-
-  .battlefield {
-    padding: 0.25rem 0.5rem 10px 0.5rem;
-    justify-content: center;
-    gap: 1.5rem;
-  }
-
-  .score-display {
-    font-size: 0.7rem;
-    padding: 4px 0.5rem;
-    gap: 1rem;
-  }
-
-  button.sprite-container {
-    min-height: 80px;
-    padding: 3px;
-  }
-
-  .players-side,
-  .enemies-side {
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-  }
-
-  .player-name,
-  .enemy-name {
-    font-size: 0.65rem;
-  }
-
-  .turn-order {
-    padding: 4px 0.5rem;
-    gap: 4px;
-    font-size: 0.65rem;
-  }
-
-  .turn-token {
-    padding: 2px 6px;
-    font-size: 0.6rem;
-  }
+  .hud { max-height: 50dvh; }
+  .battlefield { gap: 1.5rem; padding: var(--space-xs) var(--space-sm) 10px; }
+  .score-display { font-size: 0.7rem; padding: var(--space-xs) var(--space-sm); gap: var(--space-md); }
+  .player-name, .enemy-name { font-size: 0.65rem; }
+  .turn-order { padding: var(--space-xs) var(--space-sm); gap: var(--space-xs); }
+  .turn-token { padding: 2px 6px; font-size: 0.6rem; }
 }
 
-@media (max-width: 360px) {
-  .hud {
-    max-height: 55dvh;
-  }
-
-  .battlefield {
-    padding: 0.2rem 0.25rem 8px 0.25rem;
-    gap: 0.75rem;
-  }
-
-  button.sprite-container {
-    min-height: 70px;
-    padding: 2px;
-  }
-
-  .players-side,
-  .enemies-side {
-    grid-template-columns: 1fr;
-    gap: 4px;
-  }
-
-  .player-hp-bar,
-  .player-energy-bar {
-    height: 4px;
-  }
-}
-
-/* ---- RESPONSIVE BATTLEFIELD ---- */
+/* ---- Sprite size by available height (stepped) ---- */
 @media (max-height: 800px), (max-width: 850px) {
-  button.sprite-container {
-    min-height: 90px;
-    transform: scale(0.85);
-    transform-origin: center;
-  }
-  
-  div.sprite-container.dead {
-    min-height: 90px;
-    transform: scale(0.85);
-    transform-origin: center;
-  }
-  
-  button.sprite-container.active {
-    transform: scale(0.95);
-  }
+  .game-container { --actor-scale: 0.85; }
+  .sprite-container { min-height: 90px; }
 }
-
 @media (max-height: 700px) {
-  button.sprite-container {
-    min-height: 80px;
-    transform: scale(0.75);
-  }
-  
-  div.sprite-container.dead {
-    min-height: 80px;
-    transform: scale(0.75);
-  }
-  
-  button.sprite-container.active {
-    transform: scale(0.85);
-  }
-
-  .battlefield {
-    padding: 0.25rem 20px 10px 20px;
-  }
+  .game-container { --actor-scale: 0.75; }
+  .sprite-container { min-height: 80px; }
+  .battlefield { padding: var(--space-xs) var(--space-lg) 10px; }
 }
-
 @media (max-height: 600px) {
-  button.sprite-container {
-    min-height: 70px;
-    transform: scale(0.65);
-  }
-  
-  div.sprite-container.dead {
-    min-height: 70px;
-    transform: scale(0.65);
-  }
-  
-  button.sprite-container.active {
-    transform: scale(0.75);
-  }
-
-  .hud {
-    max-height: 50dvh;
-    padding: 0.5rem;
-  }
+  .game-container { --actor-scale: 0.65; }
+  .sprite-container { min-height: 70px; }
+  .hud { max-height: 50dvh; padding: var(--space-sm); }
 }

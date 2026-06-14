@@ -44,7 +44,7 @@ export async function joinLobby(lobbyId:string): Promise<void> {
 
     const lobbyRef = doc(db, 'lobbies', lobbyId);
     const snap = await getDoc(lobbyRef);
-
+    
     if (!snap.exists()) { throw { code: 'lobby/not-found' }; }
     if (snap.data().status === 'in_game') { throw { code: 'lobby/already-started' }; }
     if (snap.data().status === 'closed') { throw { code: 'lobby/is-closed' }; }
@@ -68,6 +68,8 @@ export async function leaveLobby(lobbyId:string): Promise<void> {
 
     const currentUser = authStore.appUser;
     if (!currentUser) { throw new Error('Not authenticated');}
+
+    await updateDoc(doc(db, 'users', currentUser.uid), { status: 'free' });
 
     const lobbyRef = doc(db, 'lobbies', lobbyId);
     const snap = await getDoc(lobbyRef);
@@ -101,7 +103,7 @@ export async function leaveLobby(lobbyId:string): Promise<void> {
             players: arrayRemove(player)
         });
     }
-    await updateDoc(doc(db, 'users', currentUser.uid), { status: 'free' });
+    
 }
 
 export async function inviteToLobby(lobbyId:string, toUid: string): Promise<void> {

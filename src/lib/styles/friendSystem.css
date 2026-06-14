@@ -1,102 +1,108 @@
+/* ============================================================
+   FRIENDSYSTEM.CSS — add friend / requests / friends list
+   Relies on global.css variables.
+   ============================================================ */
+
 .social-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-  }
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
 
-  .social-section h3 {
-    font-size: 1.1rem;
-    color: var(--color-gold);
-    margin-bottom: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
+.social-section h3 {
+  font-size: 1.1rem;
+  color: var(--color-gold);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
 
-  .search-box {
-    display: flex;
-    gap: 8px;
-  }
+/* ---- SEARCH ---- */
+.search-box {
+  display: flex;
+  gap: var(--space-sm);
+}
+.search-box input {
+  flex: 1;
+  /* base input style comes from global.css; nothing to repeat here */
+}
+.search-box button {
+  width: auto;
+  flex-shrink: 0;
+}
 
-  .search-box input {
-    flex: 1;
-    padding: 8px 12px;
-    background: rgba(0,0,0,0.3);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    color: #fff;
-  }
+.search-result {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius);
+}
 
-  .search-box button {
-    padding: 8px 16px;
-  }
+/* ---- LISTS ---- */
+.list-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-height: 150px;
+  overflow-y: auto;
+}
 
-  .search-result {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 10px;
-    padding: 8px 12px;
-    background: rgba(124, 58, 237, 0.1);
-    border: 1px solid var(--color-accent);
-    border-radius: var(--radius);
-  }
+.request-row,
+.friend-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(75, 54, 95, 0.3);
+  border-radius: var(--radius);
+}
+.friend-row {
+  justify-content: flex-start;   /* dot + name aligned left */
+}
 
-  .list-container {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    max-height: 150px;
-    overflow-y: auto;
-  }
+/* ---- STATUS DOT (single definition) ---- */
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.status-free    { background: var(--color-hp);    box-shadow: 0 0 6px var(--color-hp); }
+.status-busy    { background: var(--color-gold); }
+.status-offline { background: var(--color-muted); }
 
-  .request-row, .friend-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    background: rgba(0,0,0,0.2);
-    border: 1px solid rgba(75, 54, 95, 0.3);
-    border-radius: var(--radius);
-  }
+/* ---- ROW ACTIONS (accept / reject) ---- */
+.row-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.btn-accept,
+.btn-reject {
+  width: auto;
+  min-height: 0;                 /* compact icon buttons, override global 44px */
+  padding: 2px var(--space-sm);
+}
+.btn-accept {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: var(--color-hp);
+  color: var(--color-hp);
+}
+.btn-reject {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
 
-  .friend-row {
-    justify-content: flex-start;
-    gap: 10px;
-  }
-
-  .status-dot {
-    width: 8px;
-    height: 8px;
-    background: var(--color-hp);
-    border-radius: 50%;
-    box-shadow: 0 0 6px var(--color-hp);
-  }
-
-  .row-actions {
-    display: flex;
-    gap: 6px;
-  }
-
-  .btn-accept {
-    background: rgba(34,197,94,0.2);
-    border-color: var(--color-hp);
-    color: var(--color-hp);
-    padding: 2px 8px;
-  }
-
-  .btn-reject {
-    background: rgba(239,68,68,0.2);
-    border-color: var(--color-danger);
-    color: var(--color-danger);
-    padding: 2px 8px;
-  }
-
-
-  .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-  .status-free { background: var(--color-hp); }
-  .status-busy { background: var(--color-gold); }
-  .status-offline { background: var(--color-muted); }
-
-  .error-text { color: var(--color-danger); font-size: 0.9rem; margin-top: 4px; }
-  .info-text { color: var(--color-gold); font-size: 0.9rem; margin-top: 4px; }
-  .empty-text { color: var(--color-muted); font-size: 0.9rem; font-style: italic; }
+/* ---- MESSAGES ---- */
+.error-text { color: var(--color-danger); font-size: 0.9rem; margin-top: var(--space-xs); }
+.info-text  { color: var(--color-gold);   font-size: 0.9rem; margin-top: var(--space-xs); }
+.empty-text { color: var(--color-muted);  font-size: 0.9rem; font-style: italic; }

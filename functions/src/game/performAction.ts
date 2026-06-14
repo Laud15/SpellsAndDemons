@@ -18,6 +18,11 @@ import type {GamePlayer, GameEnemy, ScrollData, StatusInstance} from "../types";
 
 const db = getFirestore();
 
+function firstAliveChooser(players: GamePlayer[]): number {
+  const idx = players.findIndex((p) => p.stats.hp > 0);
+  return idx === -1 ? 0 : idx;
+}
+
 async function executeEnemyAction(
   enemy: GameEnemy,
   players: GamePlayer[],
@@ -497,7 +502,7 @@ export const performAction = onCall(
         phase: "drop_phase",
         winsCount: newWinsCount,
         drop: drops,
-        dropChooserIndex: 0,
+        dropChooserIndex: firstAliveChooser(players),
         pendingLevelUps,
         lastAttackingEnemies: [],
       });
@@ -574,7 +579,7 @@ export const performAction = onCall(
             phase: "drop_phase",
             winsCount: newWinsCount,
             drop: drops,
-            dropChooserIndex: 0,
+            dropChooserIndex: firstAliveChooser(players),
             pendingLevelUps,
             lastActorId: uid,
             lastAttackingEnemies: actingEnemyIds ?? [],
@@ -671,7 +676,7 @@ export const performAction = onCall(
           phase: "drop_phase",
           winsCount: newWinsCount,
           drop: drops,
-          dropChooserIndex: 0,
+          dropChooserIndex: firstAliveChooser(players),
           pendingLevelUps,
           turn: FieldValue.increment(1),
           lastActorId: uid,

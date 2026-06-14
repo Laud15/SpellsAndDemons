@@ -653,11 +653,11 @@
                              <span class="move-name">{scroll?.name ?? move.scrollId}</span>
                                 <span class="move-stats">
                                     Lv.{move.level} |
-                                    {scroll?.damage ? `damage: ${scroll.damage * move.level}` : ''}
-                                    {scroll?.heal ? `heal: ${scroll.heal * move.level}` : ''}
-                                    {scroll?.statusEffect ? `status: ${scroll.statusEffect}` : ''}
-                                    {scroll?.target ? `target type: ${scroll.target}` : ``}
-                                    Energy cost {(scroll?.energyCost ?? 0) * move.level}
+                                    {scroll?.damage ? `damage: ${scroll.damage * move.level}` : ''}, 
+                                    {scroll?.heal ? `heal: ${scroll.heal * move.level}` : ''}, 
+                                    {scroll?.statusEffect ? `status: ${scroll.statusEffect}` : ''}, 
+                                    {scroll?.target ? `target type: ${scroll.target}` : ``}, 
+                                    Energy cost {(scroll?.energyCost ?? 0) * move.level}, 
                                 </span>
                         </button>
                         {/each}

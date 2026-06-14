@@ -1,110 +1,130 @@
+/* ============================================================
+   RANKING.CSS — global leaderboard
+   Relies on global.css variables.
+   ============================================================ */
+
 .ranking-container {
-    max-width: 600px;
-    margin: 40px auto;
-    padding: 30px;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-  }
+  width: 100%;
+  max-width: 600px;
+  margin: var(--space-xl) auto;
+  padding: var(--space-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
 
-  h1 {
-    color: var(--color-gold);
-    text-align: center;
-    margin-bottom: 30px;
-    font-size: 2.2rem;
-  }
+/* scoped to avoid styling every h1 on pages that import this file */
+.ranking-container h1 {
+  color: var(--color-gold);
+  text-align: center;
+  margin-bottom: var(--space-lg);
+  font-size: 2.2rem;
+}
 
-  .leaderboard {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 30px;
-    max-height: 400px;
-    overflow-y: auto;
-    padding-right: 8px;
-  }
+/* ---- LEADERBOARD LIST ---- */
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: var(--space-sm);
+}
 
-  .player-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 16px;
-    background: rgba(25, 20, 35, 0.6);
-    border: 1px solid rgba(75, 54, 95, 0.4);
-    border-radius: var(--radius);
-  }
+.player-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 12px var(--space-md);
+  background: rgba(25, 20, 35, 0.6);
+  border: 1px solid rgba(75, 54, 95, 0.4);
+  border-radius: var(--radius);
+}
 
-  .player-row.podium-1 {
-    border-color: var(--color-gold);
-    background: rgba(240, 180, 41, 0.12);
-    box-shadow: 0 0 8px rgba(240, 180, 41, 0.2);
-  }
-  .player-row.podium-1 .rank, .player-row.podium-1 .username {
-    color: var(--color-gold);
-    font-weight: bold;
-  }
+/* ---- PODIUM (gold / silver / bronze) ---- */
+.player-row.podium-1 {
+  border-color: var(--color-gold);
+  background: rgba(240, 180, 41, 0.12);
+  box-shadow: 0 0 8px rgba(240, 180, 41, 0.2);
+}
+.player-row.podium-1 .rank,
+.player-row.podium-1 .username {
+  color: var(--color-gold);
+  font-weight: bold;
+}
 
-  .player-row.podium-2 {
-    border-color: #cbd5e1;
-    background: rgba(203, 213, 225, 0.1);
+.player-row.podium-2 {
+  border-color: #cbd5e1;                 /* silver: intentional, no token */
+  background: rgba(203, 213, 225, 0.1);
+}
+.player-row.podium-2 .rank,
+.player-row.podium-2 .username {
+  color: #e2e8f0;
+}
+
+.player-row.podium-3 {
+  border-color: #cd7f32;                 /* bronze: intentional, no token */
+  background: rgba(205, 127, 50, 0.08);
+}
+.player-row.podium-3 .rank,
+.player-row.podium-3 .username {
+  color: #dfa067;
+}
+
+/* ---- ROW CONTENT ---- */
+.rank {
+  font-family: var(--font-title);
+  color: var(--color-accent);
+  width: 40px;
+  flex-shrink: 0;
+}
+.username {
+  flex-grow: 1;
+  font-size: 1.15rem;
+  /* truncate very long names instead of breaking the row */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.score {
+  font-family: var(--font-title);
+  color: var(--color-text);
+  flex-shrink: 0;
+}
+.score small {
+  color: var(--color-muted);
+  font-family: var(--font-body);
+}
+
+/* ---- STATES ---- */
+.loading {
+  text-align: center;
+  color: var(--color-muted);
+  margin: var(--space-lg) 0;
+}
+
+.back-btn {
+  display: inline-block;
+  color: var(--color-muted);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+.back-btn:hover {
+  color: var(--color-accent);
+}
+
+/* ---- RESPONSIVE ---- */
+@media (max-width: 768px) {
+  .ranking-container {
+    margin: var(--space-lg) var(--space-md);
+    padding: var(--space-lg);
   }
-  .player-row.podium-2 .rank, .player-row.podium-2 .username {
-    color: #e2e8f0;
-  }
+}
 
-  .player-row.podium-3 {
-    border-color: #cd7f32;
-    background: rgba(205, 127, 50, 0.08);
-  }
-  .player-row.podium-3 .rank, .player-row.podium-3 .username {
-    color: #dfa067;
-  }
-
-  .rank {
-    font-family: var(--font-title);
-    color: var(--color-accent);
-    width: 40px;
-  }
-
-  .username {
-    flex-grow: 1;
-    font-size: 1.15rem;
-  }
-
-  .score {
-    font-family: var(--font-title);
-    color: var(--color-text);
-  }
-
-  .score small {
-    color: var(--color-muted);
-    font-family: var(--font-body);
-  }
-
-  .loading {
-    text-align: center;
-    color: var(--color-muted);
-    margin: 20px 0;
-  }
-
-  .back-btn {
-    display: inline-block;
-    color: var(--color-muted);
-    text-decoration: none;
-    transition: color var(--transition);
-  }
-
-  .back-btn:hover {
-    color: var(--color-accent);
-  }
-
-
-  @media (max-width: 768px) {
-    .ranking-container {
-      margin: 20px 15px;
-      padding: 20px;
-    }
-  }
-
-
-
+@media (max-width: 480px) {
+  .ranking-container h1 { font-size: 1.8rem; }
+  .username { font-size: 1rem; }
+  .player-row { padding: var(--space-sm) var(--space-sm); }
+}

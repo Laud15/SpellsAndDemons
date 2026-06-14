@@ -1,157 +1,182 @@
-/* lobby.css */
-  .lobby-container {
-    width: 100%; 
-    max-width: 900px;
-    margin: 40px 0; 
-    padding: 20px;
-    box-sizing: border-box; 
-  }
+/* ============================================================
+   LOBBY.CSS — lobby room (players panel + invite/actions panel)
+   Relies on global.css variables.
+   ============================================================ */
 
-  h1 {
-    color: var(--color-gold);
-    text-align: center;
-    margin-bottom: 30px;
-    font-size: 2.2rem;
-  }
+.lobby-container {
+  width: 100%;
+  max-width: 900px;
+  margin: var(--space-xl) 0;
+  padding: var(--space-lg);
+}
 
+h1 {
+  color: var(--color-gold);
+  text-align: center;
+  margin-bottom: var(--space-lg);
+  font-size: 2.2rem;
+}
+
+/* ---- LAYOUT ---- */
+.lobby-grid {
+  display: flex;
+  gap: var(--space-lg);
+  justify-content: center;
+}
+
+.panel {
+  flex: 1;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-lg);
+}
+
+h2 {
+  font-size: 1.3rem;
+  color: var(--color-gold);
+  border-bottom: 1px solid rgba(75, 54, 95, 0.4);
+  padding-bottom: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+/* ---- PLAYERS LIST ---- */
+.players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.player-slot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(75, 54, 95, 0.6);
+  border-radius: var(--radius);
+}
+.player-slot.is-host {
+  border-color: var(--color-gold);
+  background: rgba(240, 180, 41, 0.05);
+}
+.player-slot.empty {
+  border-style: dashed;
+  border-color: rgba(75, 54, 95, 0.4);
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+.host-badge {
+  background: var(--color-gold);
+  color: #000;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  font-weight: bold;
+  border-radius: 4px;
+  font-family: var(--font-title);
+}
+
+/* ---- INVITE LIST ---- */
+.invite-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-height: 180px;
+  overflow-y: auto;
+  margin-bottom: var(--space-lg);
+}
+
+.invite-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius);
+}
+.invite-row span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-invite {
+  width: auto;
+  min-height: 0;             /* compact, override global 44px */
+  flex-shrink: 0;
+  padding: 6px var(--space-md);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+/* ---- CONTROLS ---- */
+.lobby-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: var(--space-lg);
+}
+
+.btn-start {
+  padding: 12px;
+  font-size: 1.1rem;
+  background: rgba(34, 197, 94, 0.2);
+  border-color: var(--color-hp);
+  color: #fff;
+}
+.btn-start:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.4);
+}
+
+.btn-leave {
+  padding: 10px;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+.btn-leave:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+/* ---- STATUS DOTS (friends to invite) ---- */
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+}
+.status-free    { background: var(--color-hp); }
+.status-busy    { background: var(--color-gold); }
+.status-offline { background: var(--color-muted); }
+
+/* ---- STATES / MESSAGES ---- */
+.join-error-box {
+  text-align: center;
+  padding: var(--space-xl);
+  background: var(--color-surface);
+  border: 2px solid var(--color-danger);
+  border-radius: var(--radius);
+}
+.join-error-box .error        { font-size: 1.2em; margin-bottom: var(--space-sm); }
+.join-error-box .redirect-msg { color: var(--color-muted); font-size: 0.9em; }
+
+.no-friends    { color: var(--color-muted); font-size: 0.95rem; }
+.loading-lobby { text-align: center; color: var(--color-muted); padding: var(--space-xl); }
+
+/* .error base color/size lives in global.css; here we only add spacing */
+.error { margin-top: var(--space-sm); }
+
+/* ---- RESPONSIVE ---- */
+@media (max-width: 768px) {
   .lobby-grid {
-    display: flex;
-    gap: 30px;
-    justify-content: center;
+    flex-direction: column;   /* players panel above, actions below */
   }
-
-  .panel {
-    flex: 1;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    padding: 20px;
-    box-sizing: border-box;
+  .lobby-container {
+    margin: var(--space-sm) 0;
+    padding: var(--space-sm);
   }
-
-  h2 {
-    font-size: 1.3rem;
-    color: var(--color-gold);
-    border-bottom: 1px solid rgba(75, 54, 95, 0.4);
-    padding-bottom: 10px;
-    margin-bottom: 20px;
-  }
-
-  .players-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .player-slot {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 14px;
-    background: rgba(0,0,0,0.3);
-    border: 1px solid rgba(75, 54, 95, 0.6);
-    border-radius: var(--radius);
-  }
-
-  .player-slot.is-host {
-    border-color: var(--color-gold);
-    background: rgba(240, 180, 41, 0.05);
-  }
-
-  .player-slot.empty {
-    border-style: dashed;
-    border-color: rgba(75, 54, 95, 0.4);
-    color: var(--color-muted);
-    font-style: italic;
-  }
-
-  .host-badge {
-    background: var(--color-gold);
-    color: #000;
-    font-size: 0.75rem;
-    padding: 2px 6px;
-    font-weight: bold;
-    border-radius: 4px;
-    font-family: var(--font-title);
-  }
-
-  .invite-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    max-height: 180px;
-    overflow-y: auto;
-    margin-bottom: 20px;
-  }
-
-  .invite-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    background: rgba(255,255,255,0.02);
-    border-radius: var(--radius);
-    gap: 15px;
-  }
-
-  .invite-row span {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .btn-invite {
-    padding: 6px 12px;
-    font-size: 0.9rem;
-    width: auto;
-    flex-shrink: 0;
-    white-space: nowrap;
-  }
-
-  .lobby-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 30px;
-  }
-
-  .btn-start {
-    padding: 12px;
-    font-size: 1.1rem;
-    background: rgba(34, 197, 94, 0.2);
-    border-color: var(--color-hp);
-    color: #fff;
-  }
-  .btn-start:hover:not(:disabled) {
-    background: rgba(34, 197, 94, 0.4);
-  }
-
-  .btn-leave {
-    padding: 10px;
-    background: rgba(239, 68, 68, 0.1);
-    border-color: var(--color-danger);
-    color: var(--color-danger);
-  }
-  .btn-leave:hover {
-    background: rgba(239, 68, 68, 0.2);
-  }
-
-
-  .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
-  .status-free { background: var(--color-hp); }
-  .status-busy { background: var(--color-gold); }
-  .status-offline { background: var(--color-muted); }
-
-  .no-friends { color: var(--color-muted); font-size: 0.95rem; }
-  .error { color: var(--color-danger); margin-top: 10px; }
-  .loading-lobby { text-align: center; color: var(--color-muted); padding: 40px; }
-
-  @media (max-width: 768px) {
-    .lobby-grid {
-      flex-direction: column;
-    }
-    .lobby-container {
-      margin: 10px 0;
-      padding: 10px;
-    }
-  }
+}

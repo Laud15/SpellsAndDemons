@@ -1,8 +1,15 @@
+/* ============================================================
+   GLOBAL.CSS — shared base for the whole app
+   Variables, reset, defaults for text/buttons/inputs.
+   Anything here should NOT be redeclared in other stylesheets.
+   ============================================================ */
+
 /* ---- FONT ---- */
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
 
 /* ---- VARIABLES ---- */
 :root {
+  /* colors */
   --color-bg:        #0d0d14;
   --color-surface:   rgba(10, 8, 20, 0.88);
   --color-border:    #4B365F;
@@ -14,11 +21,26 @@
   --color-text:      #e2d9f3;
   --color-muted:     #9ca3af;
 
+  /* fonts */
   --font-title:      'Cinzel', serif;
   --font-body:       'Crimson Text', serif;
 
+  /* shape */
   --radius:          6px;
   --transition:      0.2s ease;
+
+  /* spacing: use these instead of scattered hard-coded numbers */
+  --space-xs:        4px;
+  --space-sm:        8px;
+  --space-md:        16px;
+  --space-lg:        24px;
+  --space-xl:        40px;
+
+  /* minimum comfortable touch target on mobile (guideline: 44px) */
+  --tap-target:      44px;
+
+  /* max width for centered containers */
+  --container-max:   1100px;
 }
 
 /* ---- RESET ---- */
@@ -31,43 +53,89 @@
 html, body {
   width: 100%;
   min-height: 100vh;
-
+  /* 100dvh accounts for mobile browser bars that appear/disappear;
+     100vh stays as a fallback for older browsers */
+  min-height: 100dvh;
   overflow-x: hidden;
   overflow-y: auto;
-
   display: flex;
   flex-direction: column;
   align-items: center;
-
-  background: linear-gradient(rgba(13, 13, 20, 0.85), rgba(13, 13, 20, 0.85)), url('/bg.png') no-repeat center center fixed;
+  background: linear-gradient(rgba(13, 13, 20, 0.85), rgba(13, 13, 20, 0.85)),
+              url('/bg.png') no-repeat center center fixed;
   background-size: cover;
-
   color: var(--color-text);
   font-family: var(--font-body);
   font-size: 16px;
+  /* prevent iOS Safari from auto-resizing text in landscape */
+  -webkit-text-size-adjust: 100%;
 }
 
+/* fixed background is heavy and sometimes buggy on mobile:
+   switch to scroll for smoother rendering */
+@media (max-width: 600px) {
+  html, body {
+    background-attachment: scroll;
+  }
+}
+
+/* ---- TYPOGRAPHY ---- */
+h1, h2, h3 {
+  font-family: var(--font-title);
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+}
+
+/* ---- BUTTONS ---- */
 button {
   font-family: var(--font-body);
+  font-size: 1rem;
   cursor: pointer;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   background: rgba(75, 54, 95, 0.4);
   color: var(--color-text);
+  padding: var(--space-sm) var(--space-md);
+  min-height: var(--tap-target);   /* comfortable touch target on mobile */
   transition: background var(--transition), border-color var(--transition);
 }
-
 button:hover:not(:disabled) {
   background: rgba(124, 58, 237, 0.4);
   border-color: var(--color-accent);
 }
-
 button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
-h1, h2, h3 {
-  font-family: var(--font-title);
-  letter-spacing: 0.05em;
+/* ---- INPUTS (shared default, so you don't repeat it in every file) ---- */
+input, textarea, select {
+  font-family: var(--font-body);
+  /* 16px matters: below 16px iOS auto-zooms on field focus,
+     which is very annoying on mobile */
+  font-size: 16px;
+  color: var(--color-text);
+  background: rgba(13, 13, 20, 0.6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-sm) var(--space-md);
+  min-height: var(--tap-target);
+  width: 100%;
+}
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+input::placeholder {
+  color: var(--color-muted);
+}
+
+/* ---- SHARED UTILITIES (messages reused across pages) ---- */
+.error {
+  color: var(--color-danger);
+  font-size: 0.95em;
+}
+.success {
+  color: var(--color-hp);
+  font-size: 0.95em;
 }

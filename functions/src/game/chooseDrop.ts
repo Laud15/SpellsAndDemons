@@ -49,7 +49,7 @@ export const chooseDrop = onCall(
     }
 
     // Verify that it is this player's turn to choose
-    const currentChooser = game.players[game.dropChooserIndex];
+    const currentChooser = game.players[dropChooserIndex];
     if (currentChooser.uid !== uid) {
       throw new HttpsError("permission-denied", "Not your turn to choose");
     }
@@ -96,7 +96,7 @@ export const chooseDrop = onCall(
     }
 
     // go to the next player or end the drop phase
-    let nextChooserIndex = game.dropChooserIndex + 1;
+    let nextChooserIndex = dropChooserIndex + 1;
 
     // skip dead players
     while ((nextChooserIndex < players.length) &&

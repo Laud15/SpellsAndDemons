@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import { authStore } from '$lib/stores/auth.svelte';
 	import { createLobby } from '$lib/firebase/lobby';
-  import { collection, query, where, onSnapshot } from 'firebase/firestore';
+  import { collection, query, where, onSnapshot, updateDoc, doc  } from 'firebase/firestore';
   import { db } from '$lib/firebase/clientSDK';
   import { joinLobby } from '$lib/firebase/lobby';
   import type { Lobby } from '$lib/types';
@@ -15,6 +15,7 @@
   let username = $derived(authStore.appUser?.username);
   let loading = $state(false);
   let pendingInvites = $state<Lobby[]>([]);
+  let joinError = $state('');
 
   $effect(() =>{
     const currentUser = authStore.appUser;
@@ -28,7 +29,9 @@
     )
 
     const unsubscribe = onSnapshot(q, (snap) =>{
-      pendingInvites = snap.docs.map(d => ({id: d.id, ...d.data() } as Lobby))
+      pendingInvites = snap.docs
+      .map(d => ({ id: d.id, ...d.data() } as Lobby))
+      .filter(lobby => lobby.players.length > 0 && lobby.players.length < 4);
     });
 
     return () =>{
@@ -37,11 +40,46 @@
 
   });
 
+
+  $effect(() => {
+    const currentUser = authStore.appUser;
+    if (!currentUser || currentUser.status !== 'busy') { return; }
+
+    const q = query(
+        collection(db, 'lobbies'),
+        where('playerIds', 'array-contains', currentUser.uid),
+        where('status', 'in', ['waiting', 'in_game'])
+    );
+
+    const unsubscribe = onSnapshot(q, (snap) => {
+        if (snap.empty) {
+            updateDoc(doc(db, 'users', currentUser.uid), { status: 'free' }).catch(() => {});
+        }
+    });
+
+    return () => unsubscribe();
+  });
+
   async function handleJoin(lobbyId:string) {
 
-    await joinLobby(lobbyId);
-     goto(`/lobby/${lobbyId}`);
-    
+    joinError = '';
+    try {
+      await joinLobby(lobbyId);
+      goto(`/lobby/${lobbyId}`);
+    } catch (e: any) {
+      joinError = mapJoinError(e.code);
+    }
+
+  }
+
+  function mapJoinError(code: string): string {
+    switch (code) {
+      case 'lobby/full': return 'This lobby is full';
+      case 'lobby/already-started': return 'The game has already started';
+      case 'lobby/is-closed': return 'This lobby is closed';
+      case 'lobby/not-found': return 'Lobby not found';
+      default: return 'Could not join the lobby';
+    }
   }
 
   async function handleLogout() {
@@ -84,18 +122,32 @@
       {#if pendingInvites.length > 0}
         <section class="invites-section">
           <h2>Pending Invites</h2>
-          <div class="invites-list">
-            {#each pendingInvites as invite}
-              <div class="invite-card">
-                <span>Invite from <strong>{invite.players[0].username}</strong></span>
-                <button class="btn-small" onclick={() => handleJoin(invite.id)}>Join</button>
-              </div>
-            {/each}
-          </div>
-        </section>
+
+          {#if joinError}
+            <p class="error">{joinError}</p>
+          {/if}
+
+            <div class="invites-list">
+              {#each pendingInvites as invite}
+                {@const isFull = invite.players.length >= 4}
+                <div class="invite-card">
+                  <span>
+                    Invite from <strong>{invite.players[0].username}</strong>
+                    ({invite.players.length}/4)
+                  </span>
+                  <button
+                    class="btn-small"
+                    onclick={() => handleJoin(invite.id)}
+                    disabled={isFull}
+                  >
+                    {isFull ? 'Full' : 'Join'}
+                  </button>
+                </div>
+              {/each}
+            </div>
+          </section>
       {/if}
     </div>
-
     <div class="social-side">
       <FriendSystem />
     </div>

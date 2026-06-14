@@ -27,12 +27,18 @@ export const skipDrop = onCall(
       throw new HttpsError("failed-precondition", "Not drop phase");
     }
 
-    const currentChooser = game.players[game.dropChooserIndex];
-    if (currentChooser.uid !== uid) {
-      throw new HttpsError("permission-denied", "Not your turn to choose");
+    let dropChooserIndex = game.dropChooserIndex;
+    while (dropChooserIndex < game.players.length &&
+       game.players[dropChooserIndex].stats.hp <= 0) {
+      dropChooserIndex++;
     }
 
-    const nextChooserIndex = game.dropChooserIndex + 1;
+    let nextChooserIndex = dropChooserIndex + 1;
+    while (nextChooserIndex < game.players.length &&
+       game.players[nextChooserIndex].stats.hp <= 0) {
+      nextChooserIndex++;
+    }
+
     const isLastChooser = nextChooserIndex >= game.players.length;
 
     if (isLastChooser) {

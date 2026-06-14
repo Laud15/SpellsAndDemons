@@ -30,6 +30,8 @@
     let startLoading = $state(false);
     let leaveLoading = $state(false);
 
+    let joinError = $state('');
+
     let friendsData = $state<Friend[]>([]);
     let availableFriendsToInvite = $derived(
       friendsData.filter(friend =>
@@ -55,7 +57,13 @@
 
             //this is needed because an invited user can enter by click on invite's notification
             if(!isAlreadyIn && isInvited){
+              try{
                 await joinLobby(lobbyId);
+              } catch( e: any) {
+                joinError = mapJoinError(e.code);
+                setTimeout(() => goto('/home'), 2500);
+                return;
+              }
             }else if(!isAlreadyIn && !isInvited){
                 goto('home');
                 return;
@@ -75,6 +83,16 @@
             lobbyStore.setLobby(null);
         };
     });
+
+    function mapJoinError(code: string): string {
+      switch (code) {
+        case 'lobby/full': return 'This lobby is full';
+        case 'lobby/already-started': return 'The game has already started';
+        case 'lobby/is-closed': return 'This lobby is closed';
+        case 'lobby/not-found': return 'Lobby not found';
+        default: return 'Could not join the lobby';
+      }
+    }
 
     //retrieve the friend that can be invited in lobby
     $effect(() =>{
@@ -142,7 +160,13 @@
 <div class="lobby-container">
   <h1>Lobby Room</h1>
 
-  {#if lobby}
+  {#if joinError}
+    <div class="join-error-box">
+      <p class="error">{joinError}</p>
+      <p class="redirect-msg">Returning to home...</p>
+    </div>
+  {:else if lobby}
+    {#if lobby}
     <div class="lobby-grid">
       <section class="panel players-panel">
         <h2>Players ({lobby.players.length}/4)</h2>
@@ -208,4 +232,10 @@
       <p>Loading magical lobby data...</p>
     </div>
   {/if}
+  {:else}
+    <div class="loading-lobby">
+      <p>Loading magical lobby data...</p>
+    </div>
+  {/if}
 </div>
+

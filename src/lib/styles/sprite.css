@@ -1,26 +1,38 @@
+/* ============================================================
+   SPRITE.CSS — sprite-sheet frame animations
+   The background-position-x values map to exact frames in the
+   sheet (128px each). Do NOT change them unless the sheet changes.
+   The displayed size is driven by --sprite-size so the game's
+   responsive scaling can shrink sprites on small screens.
+   ============================================================ */
+
 /* ---- SPRITE ---- */
 .sprite {
-  width: 128px;   
-  height: 128px;
-  image-rendering: pixelated;
+  /* single source of truth for sprite size; overridable per breakpoint */
+  --sprite-size: 128px;
+
+  width: var(--sprite-size);
+  height: var(--sprite-size);
+  /* crisp-edges is the modern keyword; pixelated is the fallback.
+     Order matters: the last one the browser understands wins,
+     so keep the broadly-supported 'pixelated' last. */
   image-rendering: crisp-edges;
+  image-rendering: pixelated;
   background-repeat: no-repeat;
-  background-size: auto 128px; 
+  /* height follows the variable; width stays auto to keep the sheet ratio */
+  background-size: auto var(--sprite-size);
   flex-shrink: 0;
 }
 
-/* ---- IDLE (frame 0-1, loop) ---- */
+/* ---- IDLE (frames 0-1, looping) ---- */
 @keyframes sprite-idle {
   0%   { background-position-x: 0px; }
   50%  { background-position-x: -128px; }
   100% { background-position-x: 0px; }
 }
+.anim-idle { animation: sprite-idle 0.8s steps(1) infinite; }
 
-.anim-idle {
-  animation: sprite-idle 0.8s steps(1) infinite;
-}
-
-/* ---- ATTACK (frame 2-6, then idle) ---- */
+/* ---- ATTACK (frames 2-6, then hold last frame) ---- */
 @keyframes sprite-attack {
   0%   { background-position-x: -256px; }
   20%  { background-position-x: -384px; }
@@ -29,23 +41,17 @@
   80%  { background-position-x: -768px; }
   100% { background-position-x: -768px; }
 }
+.anim-attack { animation: sprite-attack 0.9s steps(1) forwards; }
 
-.anim-attack {
-  animation: sprite-attack 0.9s steps(1) forwards;
-}
-
-/* ---- HIT (frame 7-8) ---- */
+/* ---- HIT (frames 7-8) ---- */
 @keyframes sprite-hit {
   0%   { background-position-x: -896px; }
   50%  { background-position-x: -1024px; }
   100% { background-position-x: -1024px; }
 }
+.anim-hit { animation: sprite-hit 0.6s steps(1) forwards; }
 
-.anim-hit {
-  animation: sprite-hit 0.6s steps(1) forwards;
-}
-
-/* ---- DEATH (frame 9-13) ---- */
+/* ---- DEATH (frames 9-13) ---- */
 @keyframes sprite-death {
   0%   { background-position-x: -1152px; }
   25%  { background-position-x: -1280px; }
@@ -53,7 +59,4 @@
   75%  { background-position-x: -1536px; }
   100% { background-position-x: -1664px; }
 }
-
-.anim-death {
-  animation: sprite-death 1.5s steps(1) forwards;
-}
+.anim-death { animation: sprite-death 1.5s steps(1) forwards; }
