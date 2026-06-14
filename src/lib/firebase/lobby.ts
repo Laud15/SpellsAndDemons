@@ -33,6 +33,7 @@ export async function createLobby(): Promise<string>{
         createdAt: serverTimestamp()
     });
 
+    await updateDoc(doc(db, 'users', currentUser.uid), { status: 'busy' });
     return ref.id
 }
 
@@ -58,6 +59,8 @@ export async function joinLobby(lobbyId:string): Promise<void> {
         playerIds: arrayUnion(currentUser.uid),
         players: arrayUnion(player),
     });
+
+    await updateDoc(doc(db, 'users', currentUser.uid), { status: 'busy' });
 }
 
 //quit from the lobby
@@ -98,6 +101,7 @@ export async function leaveLobby(lobbyId:string): Promise<void> {
             players: arrayRemove(player)
         });
     }
+    await updateDoc(doc(db, 'users', currentUser.uid), { status: 'free' });
 }
 
 export async function inviteToLobby(lobbyId:string, toUid: string): Promise<void> {

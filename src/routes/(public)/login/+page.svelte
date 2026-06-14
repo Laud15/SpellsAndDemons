@@ -52,6 +52,7 @@
       {loading ? 'Login...' : 'Login'}
     </button>
 
+    <a href="/forgot-password">Forgot password?</a>
     <a href="/register">Don't have an account? Register!</a>
   </div>
 </div>

@@ -1,3 +1,5 @@
+export type UserStatus = 'offline' | 'free' | 'busy';
+
 export interface AppUser {
     uid: string;
     email: string;
@@ -5,6 +7,7 @@ export interface AppUser {
     score: number;
     friends: string[]; //uid array
     pushSubscription?: PushSubscriptionJSON | null;
+    status?: UserStatus; 
 }
 
 export interface FriendRequest {
@@ -45,6 +48,7 @@ export interface Lobby{
 export interface Friend{
   uid: string;
   username: string;
+  status?: 'offline' | 'free' | 'busy'; 
 }
 
 export interface MoveInstance{

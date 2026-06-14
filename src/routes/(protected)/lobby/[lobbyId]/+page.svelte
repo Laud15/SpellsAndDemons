@@ -31,7 +31,12 @@
     let leaveLoading = $state(false);
 
     let friendsData = $state<Friend[]>([]);
-    let availableFriendsToInvite = $derived(friendsData.filter(friend => !lobby?.players.some(p => p.uid === friend.uid)));
+    let availableFriendsToInvite = $derived(
+      friendsData.filter(friend =>
+          !lobby?.players.some(p => p.uid === friend.uid) &&
+          friend.status === 'free'
+      )
+    );
 
     $effect(() => {
         const currentUser = authStore.appUser;
@@ -85,7 +90,11 @@
         );
 
         const unsubscribe = onSnapshot(q, (snap) =>{
-            friendsData = snap.docs.map(d => ({ uid: d.data().uid, username: d.data().username}));
+            friendsData = snap.docs.map(d => ({
+              uid: d.data().uid,
+              username: d.data().username,
+              status: d.data().status ?? 'offline'  
+            }));
         });
 
         return () => {
@@ -161,9 +170,14 @@
             <div class="invite-list">
               {#each availableFriendsToInvite as friend }
                 <div class="invite-row">
+                  <span class="status-dot status-{friend.status ?? 'offline'}"></span>
                   <span>{friend.username}</span>
-                  <button class="btn-invite" onclick={() => handleInvite(friend.uid)} disabled={inviteLoading}>
-                    {inviteLoading ? 'Inviting...' : 'Invite'}
+                  <button 
+                    class="btn-invite"
+                    onclick={() => handleInvite(friend.uid)}
+                    disabled={inviteLoading || friend.status !== 'free'}
+                  >
+                    {friend.status === 'free' ? (inviteLoading ? 'Inviting...' : 'Invite') : friend.status === 'busy' ? 'Busy' : 'Offline'}
                   </button>
                 </div>
               {/each}

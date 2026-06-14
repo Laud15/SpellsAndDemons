@@ -12,7 +12,7 @@
     } from '$lib/firebase/game';
     import type { Game, GameEnemy} from '$lib/types';
 	import { onMount, tick } from 'svelte';
-    import { collection, getDocs } from 'firebase/firestore';
+    import { collection, doc, getDocs, updateDoc } from 'firebase/firestore';
     import { db } from '$lib/firebase/clientSDK';
     import type { ScrollData } from '$lib/types';
 
@@ -155,6 +155,9 @@
                 gameStore.setGame(null);
                 gameStore.clearLog();
                 prevGame = null;
+                if (myUid) {
+                    updateDoc(doc(db, 'users', myUid), { status: 'free' }).catch(() => {});
+                }
                 if (gameOverInterval) {
                     clearInterval(gameOverInterval);
                     gameOverInterval = null;

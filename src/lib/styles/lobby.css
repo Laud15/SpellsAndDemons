@@ -136,6 +136,12 @@
     background: rgba(239, 68, 68, 0.2);
   }
 
+
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .status-free { background: var(--color-hp); }
+  .status-busy { background: var(--color-gold); }
+  .status-offline { background: var(--color-muted); }
+
   .no-friends { color: var(--color-muted); font-size: 0.95rem; }
   .error { color: var(--color-danger); margin-top: 10px; }
   .loading-lobby { text-align: center; color: var(--color-muted); padding: 40px; }

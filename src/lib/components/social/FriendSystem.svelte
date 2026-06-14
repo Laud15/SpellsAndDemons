@@ -9,14 +9,8 @@
   import { db } from '$lib/firebase/clientSDK';
   import type { FriendRequest } from '$lib/types';
   import { authStore } from '$lib/stores/auth.svelte';
-
+  import type { Friend } from '$lib/types/index'
   import '$lib/styles/friendSystem.css';
-  
-
-  interface Friend {
-    uid: string;
-    username: string;
-  }
 
   let searchUsername = $state('');
   let searchResult = $state<any>(null);
@@ -40,16 +34,16 @@
     };
 
     const q = query(
-      collection(db, 'usernames'),
+      collection(db, 'users'),
       where('uid', 'in', currentUser.friends)
     );
 
     const unsubscribe = onSnapshot(q, (snap) => {
       friends = snap.docs.map(d => ({
-        uid: d.data().uid,
-        username: d.data().username || d.id
-      }));
-    
+            uid: d.data().uid,
+            username: d.data().username,
+            status: d.data().status ?? 'offline'
+        }));
     }, (err) => {
       console.error("Error in friends snapshot:", err);
     });
@@ -203,7 +197,7 @@
       <div class="list-container">
         {#each friends as friend}
           <div class="friend-row">
-            <span class="status-dot"></span>
+            <span class="status-dot status-{friend.status ?? 'offline'}"></span>
             <span>{friend.username}</span>
           </div>
         {/each}

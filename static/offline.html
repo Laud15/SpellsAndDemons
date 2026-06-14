@@ -7,92 +7,137 @@
     <meta name="theme-color" content="#4B365F">
     <link rel="icon" href="/icons/skull_192.png">
     
-    <style>
-        body {
-            background-color: #037124;
-            color: #f5f5f5;
-            font-family: sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            text-align: center;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 500px;
-            background: #2a2a2a;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
-            border: 2px solid #4B365F;
-        }
 
-        h1 {
-            color: #910bb6; 
-            margin-bottom: 10px;
-        }
+<style>
 
-        p {
-            line-height: 1.6;
-            margin-bottom: 30px;
-        }
+    :root {
+    --color-bg:      #0d0d14;
+    --color-surface: rgba(10, 8, 20, 0.88);
+    --color-border:  #4B365F;
+    --color-accent:  #7c3aed;
+    --color-gold:    #f0b429;
+    --color-text:    #e2d9f3;
+    --color-muted:   #9ca3af;
+    --font-title:    'Cinzel', serif;
+    --font-body:     'Crimson Text', serif;
+    --radius:        6px;
+    }
 
-        .loader {
-            border: 4px solid #333;
-            border-top: 4px solid #910bb6;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
+    html, body {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(rgba(13, 13, 20, 0.9), rgba(13, 13, 20, 0.9)),
+                var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 16px;
+    text-align: center;
+    padding: 20px;
+    }
+
+    .container {
+    max-width: 540px;
+    background: var(--color-surface);
+    padding: 40px;
+    border-radius: var(--radius);
+    border: 2px solid var(--color-border);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    }
+
+    h1 {
+    font-family: var(--font-title);
+    letter-spacing: 0.05em;
+    color: var(--color-accent);
+    margin-bottom: 12px;
+    }
+
+    .subtitle {
+    line-height: 1.6;
+    color: var(--color-text);
+    margin-bottom: 28px;
+    }
+
+    /* ---- SPRITES ---- */
+    .sprites-row {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+    }
+
+    .sprite-idle {
+    width: 128px;
+    height: 128px;
+    image-rendering: pixelated;
+    }
+    /* ---- LOADER ---- */
+    .loader {
+    border: 4px solid var(--color-border);
+    border-top: 4px solid var(--color-accent);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+    }
+
+    @keyframes spin {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+    }
+
+    .waiting {
+    margin-top: 20px;
+    font-size: 0.9em;
+    color: var(--color-muted);
+    }
+
+</style>
+
 </head>
 <body>
-
     <div class="container">
         <h1>You are Offline</h1>
-        <p>It seems that your connection to the dark arts has been severed.<br>Check your connections.</p>
-        
-        <div class="loader"></div>
-        <p style="margin-top: 20px; font-size: 0.9em; color: #888;">
-            Waiting for reconnection...
+        <p class="subtitle">
+            It seems that your connection to the dark arts has been severed.<br>
+            Check your connections.
         </p>
+
+        <div class="sprites-row">
+            <img class="sprite-idle" src="/sprites/fire_mage_idle.png" alt="Fire Mage">
+            <img class="sprite-idle" src="/sprites/shadow_mage_idle.png" alt="Shadow Mage">
+            <img class="sprite-idle" src="/sprites/water_mage_idle.png" alt="Water Mage">
+            <img class="sprite-idle" src="/sprites/forest_mage_idle.png" alt="Forest Mage">
+            <img class="sprite-idle" src="/sprites/infernalOoze_idle.png" alt="Infernal Ooze">
+            <img class="sprite-idle" src="/sprites/ooze_idle.png" alt="Ooze">
+        </div>
+
+        <div class="loader"></div>
+        <p class="waiting">Waiting for reconnection...</p>
     </div>
 
     <script>
-      
         function checkAndReload() {
             window.location.reload();
         }
-
-        //Listen to the native event
         window.addEventListener('online', checkAndReload);
-
-        //Fallback for DevTools or "ghost connections" (Wi-Fi connected but no internet)
-        //Check every 3 seconds, but ONLY if the browser thinks it's online
         setInterval(async () => {
             if (navigator.onLine) {
                 try {
-                    // Let's do a tiny "ping" to the manifest by forcing the cache bypass.
-                    //If the server responds 200 OK, we are really online.
-                    const response = await fetch('/manifest.webmanifest', { 
-                        method: 'HEAD', 
-                        cache: 'no-store' 
+                    const response = await fetch('/manifest.webmanifest', {
+                        method: 'HEAD',
+                        cache: 'no-store'
                     });
-                    
-                    if (response.ok) { checkAndReload();}
+                    if (response.ok) { checkAndReload(); }
                 } catch (error) {
-                    // The fetch fails if we are still offline we don't do anything and let the animation run.
+                   
                 }
             }
         }, 3000);

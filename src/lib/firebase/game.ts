@@ -21,7 +21,7 @@ export async function performAction(
   }
 ): Promise<void> {
   const fn = httpsCallable(functions, 'performAction');
-  await fn({ gameId, action});
+  await fn({ gameId, action });
 }
 
 export async function chooseDrop(gameId: string, scrollId: string, replaceScrollId?: string): Promise<void>{

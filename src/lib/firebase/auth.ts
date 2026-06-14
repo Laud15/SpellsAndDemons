@@ -2,10 +2,11 @@ import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     signOut,
-    updateProfile
+    updateProfile,
+    sendPasswordResetEmail,
 } from 'firebase/auth';
 
-import { doc, setDoc, getDoc, writeBatch } from 'firebase/firestore';
+import {  doc, setDoc, getDoc, writeBatch, updateDoc } from 'firebase/firestore';
 import { auth, db } from './clientSDK';
 import { unsubscribeFromPush } from './notification'
 
@@ -39,18 +40,29 @@ export async function register(email: string, password: string, username: string
         score: 0,
         friends: [],
         pushSubscription: null,
+        status: 'free',  
         createdAt: new Date()
         });
 
     await batch.commit();
 }
 
+export async function setUserStatus(uid: string, status: 'offline' | 'free' | 'busy') {
+    await updateDoc(doc(db, 'users', uid), { status });
+}
+
 export async function  login(email: string, password: string) {
-    await signInWithEmailAndPassword(auth, email, password)
+    const cred = await signInWithEmailAndPassword(auth, email, password)
+    await setUserStatus(cred.user.uid, 'free');
 }
 
 export async function logout(uid: string){
+    await setUserStatus(uid, 'offline'); 
     await unsubscribeFromPush(uid);
     await signOut(auth);
+}
+
+export async function resetPassword(email: string) {
+    await sendPasswordResetEmail(auth, email);
 }
 
