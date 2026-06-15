@@ -199,6 +199,9 @@
           <div class="friend-row">
             <span class="status-dot status-{friend.status ?? 'offline'}"></span>
             <span>{friend.username}</span>
+            <span class="status-label status-label-{friend.status ?? 'offline'}">
+              {friend.status === 'free' ? 'Online' : friend.status === 'busy' ? 'Busy' : 'Offline'}
+            </span>
           </div>
         {/each}
       </div>

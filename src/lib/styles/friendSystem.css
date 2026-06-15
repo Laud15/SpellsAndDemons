@@ -75,9 +75,19 @@
   display: inline-block;
   flex-shrink: 0;
 }
-.status-free    { background: var(--color-hp);    box-shadow: 0 0 6px var(--color-hp); }
+.status-free    { background: var(--color-hp); box-shadow: 0 0 6px var(--color-hp); }
 .status-busy    { background: var(--color-gold); }
 .status-offline { background: var(--color-muted); }
+
+status-label {
+  margin-left: auto;          /* push it to the right edge of the row */
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.status-label-free    { color: var(--color-hp); }
+.status-label-busy    { color: var(--color-gold); }
+.status-label-offline { color: var(--color-muted); }
 
 /* ---- ROW ACTIONS (accept / reject) ---- */
 .row-actions {

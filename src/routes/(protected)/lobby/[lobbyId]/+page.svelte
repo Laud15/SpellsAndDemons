@@ -15,7 +15,7 @@
     import { doc, getDoc } from 'firebase/firestore';
 
     import { collection, query, where, onSnapshot } from 'firebase/firestore';
-    import { auth, db } from '$lib/firebase/clientSDK';
+    import { db } from '$lib/firebase/clientSDK';
     import type { Friend } from '$lib/types';
 
     import '$lib/styles/lobby.css';
@@ -35,8 +35,7 @@
     let friendsData = $state<Friend[]>([]);
     let availableFriendsToInvite = $derived(
       friendsData.filter(friend =>
-          !lobby?.players.some(p => p.uid === friend.uid) &&
-          friend.status === 'free'
+          !lobby?.players.some(p => p.uid === friend.uid)
       )
     );
 
