@@ -660,7 +660,6 @@ export const performAction = onCall(
         return {success: true};
       }
 
-
       // check if all enemies are dead after their turn
       if (enemies.length === 0) {
         const newWinsCount = game.winsCount + 1;

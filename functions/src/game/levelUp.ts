@@ -1,5 +1,5 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
-import {getFirestore} from "firebase-admin/firestore";
+import {FieldValue, getFirestore} from "firebase-admin/firestore";
 import {computeStats, delay} from "../engine/combat";
 import type {GameEnemy, GamePlayer} from "../types";
 import {processEnemyTurns} from "./performAction";
@@ -124,6 +124,17 @@ export const levelUp = onCall(
     const allPlayersDead = players.every((p) => p.stats.hp <= 0);
     if (allPlayersDead) {
       phase = "game_over";
+      // assign points to every player, same formula as performAction
+      const pointsEach = Math.floor(
+        (game.winsCount * 10) / game.players.length
+      );
+      await Promise.all(
+        game.players.map((p: GamePlayer) =>
+          db.collection("users").doc(p.uid).update({
+            score: FieldValue.increment(pointsEach),
+          })
+        )
+      );
     } else {
       if (currentActorIndex >= game.turnOrder.length) {
         currentActorIndex = game.turnOrder.findIndex(

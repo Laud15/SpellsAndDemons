@@ -1,6 +1,6 @@
 // functions/src/game/skipDrop.ts
 import {onCall, HttpsError} from "firebase-functions/v2/https";
-import {getFirestore} from "firebase-admin/firestore";
+import {FieldValue, getFirestore} from "firebase-admin/firestore";
 import type {GamePlayer, GameEnemy, EnemyData, StatusInstance} from "../types";
 import {generateEnemyIds} from "../engine/enemies";
 import {scaleEnemy, computeTurnOrder, delay} from "../engine/combat";
@@ -92,6 +92,17 @@ export const skipDrop = onCall(
         const allPlayersDead = players.every((p) => p.stats.hp <= 0);
         if (allPlayersDead) {
           phase = "game_over";
+          // assign points to every player, same formula as performAction
+          const pointsEach = Math.floor(
+            (game.winsCount * 10) / game.players.length
+          );
+          await Promise.all(
+            game.players.map((p: GamePlayer) =>
+              db.collection("users").doc(p.uid).update({
+                score: FieldValue.increment(pointsEach),
+              })
+            )
+          );
         } else {
           // If all initial enemies have acted,
           // reset the index finger at the beginning
