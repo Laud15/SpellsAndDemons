@@ -20,7 +20,7 @@
 
     import '$lib/styles/game.css';
     import '$lib/styles/sprite.css';
-
+    
     //scroll's data from the db
     let scrollsData = $state<Record<string, ScrollData>>({});
 
@@ -361,6 +361,8 @@
             }
         }
     }
+
+
     async function handleAttack() {
 
         if (!selectedScrollId || !game) { return; } //id data is missing don't do anything
@@ -487,7 +489,7 @@
                     >
                         <Sprite
                             spriteName = {player.sprite}
-                            animation={playerAnims[player.uid] ?? 'idle'}
+                            animation= {playerAnims[player.uid] ?? 'idle'}
                         /> 
                         <!-- life bar -->
                         <div class="player-hp-bar">
@@ -653,10 +655,10 @@
                              <span class="move-name">{scroll?.name ?? move.scrollId}</span>
                                 <span class="move-stats">
                                     Lv.{move.level} |
-                                    {scroll?.damage ? `damage: ${scroll.damage * move.level}` : ''}, 
-                                    {scroll?.heal ? `heal: ${scroll.heal * move.level}` : ''}, 
-                                    {scroll?.statusEffect ? `status: ${scroll.statusEffect}` : ''}, 
-                                    {scroll?.target ? `target type: ${scroll.target}` : ``}, 
+                                    {scroll?.damage ? `damage: ${scroll.damage * move.level}, ` : ''} 
+                                    {scroll?.heal ? `heal: ${scroll.heal * move.level}, ` : ''} 
+                                    {scroll?.statusEffect ? `status: ${scroll.statusEffect}, ` : ''}
+                                    {scroll?.target ? `target type: ${scroll.target}, ` : ``}
                                     Energy cost {(scroll?.energyCost ?? 0) * move.level}, 
                                 </span>
                         </button>

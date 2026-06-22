@@ -13,7 +13,7 @@ import {
   PUBLIC_FIREBASE_MEASUREMENT_ID
 } from '$env/static/public';
 
-// Your web app's Firebase configuration
+
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: PUBLIC_FIREBASE_API_KEY,

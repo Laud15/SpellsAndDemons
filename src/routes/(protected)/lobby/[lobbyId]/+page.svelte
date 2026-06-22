@@ -83,6 +83,8 @@
         };
     });
 
+    
+
     function mapJoinError(code: string): string {
       switch (code) {
         case 'lobby/full': return 'This lobby is full';

@@ -148,6 +148,7 @@
           </section>
       {/if}
     </div>
+    
     <div class="social-side">
       <FriendSystem />
     </div>
